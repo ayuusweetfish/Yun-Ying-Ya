@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html><head>
+  <meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
+  <title></title>
+</head><body>
+
+<textarea id='source' rows='20' cols='80'></textarea>
+<div id='circle'></div>
+
+<style>
+#circle {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: black;
+}
+</style>
+
+<script>
+const elSource = document.getElementById('source')
+let frame_light
+const parseFn = () => {
+  const s = `(function () { 'use strict'; ${elSource.value}\nreturn frame_light; })()`
+  try {
+    frame_light = eval?.(s)
+  } catch (e) {
+    console.log(e)
+    return
+  }
+  console.log(frame_light)
+}
+elSource.addEventListener('input', parseFn)
+document.addEventListener('DOMContentLoaded', parseFn)
+
+const circle = document.getElementById('circle')
+
+let lastTimestamp = null
+let n = 0
+const INTERVAL = 100
+const refresh = (timestamp) => {
+  const dt = (lastTimestamp !== null ? timestamp - lastTimestamp : 0) // milliseconds
+  lastTimestamp = timestamp
+  if (typeof frame_light === 'function') {
+    n += dt
+    while (n > INTERVAL * 2) {
+      n -= INTERVAL
+      frame_light()
+    }
+    if (n > INTERVAL) {
+      n -= INTERVAL
+      const [r, g, b] = frame_light()
+      const rs = Math.max(0, Math.min(255, Math.round(r))).toString(16).padStart(2, '0')
+      const gs = Math.max(0, Math.min(255, Math.round(g))).toString(16).padStart(2, '0')
+      const bs = Math.max(0, Math.min(255, Math.round(b))).toString(16).padStart(2, '0')
+      circle.style.background = `#${rs}${gs}${bs}`
+    }
+  }
+  requestAnimationFrame(refresh)
+}
+requestAnimationFrame(refresh)
+</script>
+</body>

@@ -12,6 +12,10 @@ while i < 1000 do
   end
   if i == 0 then
     local r, g, b = f()
+    if type(r) ~= 'number' and type(_G['frame_light']) == 'function' then
+      f = _G['frame_light']
+      r, g, b = f()
+    end
     print(string.format('%d ms: #%02x%02x%02x',
       i * 10, math.floor(r + 0.5), math.floor(g + 0.5), math.floor(b + 0.5)))
   end

@@ -1,10 +1,24 @@
 local load_duck = function (s)
-  local f = setfenv(load(s), {
+  fenv = {
     math = math,
-  })
+    os = { time = os.time },
+  }
+  local f = setfenv(load(s), fenv)
+  -- Supported formats:
+  -- * Directly return R, G, B from file scope
+  -- * Return a function from file scope
+  -- * Create a global function named `frame_light()`
   return function ()
     local status, r, g, b = pcall(f)
-    if status then
+    while type(r) == 'function' do
+      f = r
+      status, r, g, b = pcall(f)
+    end
+    if r == nil and type(fenv['frame_light']) == 'function' then
+      f = fenv['frame_light']
+      status, r, g, b = pcall(f)
+    end
+    if status and type(r) == 'number' and type(g) == 'number' and type(b) == 'number' then
       return math.floor(r + 0.5), math.floor(g + 0.5), math.floor(b + 0.5)
     else
       return nil
