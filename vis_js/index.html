@@ -5,14 +5,17 @@
 </head><body>
 
 <textarea id='source' rows='20' cols='80'></textarea>
-<div id='circle'></div>
+<div id='circle-container'><div id='circle'></div></div>
 
 <style>
+#circle-container {
+  background: black;
+}
 #circle {
   width: 200px;
   height: 200px;
   border-radius: 50%;
-  background: black;
+  border: grey 2px solid;
 }
 </style>
 
