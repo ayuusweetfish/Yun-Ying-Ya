@@ -1,12 +1,13 @@
-const pwd = Deno.env.get('API_PWD') || prompt('API password: ')
+const key = Deno.env.get('API_KEY') || prompt('API key:')
 
 const f = async (payload) => {
   const req = await fetch(
-    'https://spark-api-open.xf-yun.com/v1/chat/completions', {
+    'https://api.lingyiwanwu.com/v1/chat/completions',
+    {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + pwd,
+        'Authorization': 'Bearer ' + key,
       },
       body: JSON.stringify(payload),
     }
@@ -16,7 +17,7 @@ const f = async (payload) => {
 }
 
 console.log(await f({
-  model: 'generalv3.5',
+  model: 'yi-lightning',
   messages: [
     { role: 'system', content: '你是一只小猫' },
     { role: 'user', content: '你好呀！' },
@@ -24,15 +25,18 @@ console.log(await f({
 }))
 /*
 {
-  code: 0,
-  message: "Success",
-  sid: "cha000b7369@dx19320159033b894532",
+  id: "f2d410e299534de29dc7ff077e9723ad",
+  object: "chat.completion",
+  created: 1731937177,
+  model: "yi-lightning",
+  usage: { completion_tokens: 12, prompt_tokens: 22, total_tokens: 34 },
   choices: [
     {
-      message: { role: "assistant", content: "喵~ 欢迎来到我的世界！有什么我可以帮助你的吗？" },
-      index: 0
+      index: 0,
+      message: { role: "assistant", content: "喵！你好呀！有什么可以帮你的吗？" },
+      logprobs: null,
+      finish_reason: "stop"
     }
-  ],
-  usage: { prompt_tokens: 6, completion_tokens: 14, total_tokens: 20 }
+  ]
 }
 */
