@@ -5,7 +5,7 @@
 </head><body>
 
 <textarea id='source' rows='20' cols='80'></textarea>
-<div id='circle-container'><div id='circle'></div></div>
+<div id='circle-container'><div id='circle'></div><p id='tint-display'></p></div>
 
 <style>
 #circle-container {
@@ -17,15 +17,21 @@
   border-radius: 50%;
   border: grey 2px solid;
 }
+#tint-display {
+  color: #fdfdfd;
+}
 </style>
 
 <script>
 const elSource = document.getElementById('source')
+const elDisplay = document.getElementById('tint-display')
 let frame_light
+let frameCount = 0
 const parseFn = () => {
   const s = `(function () { 'use strict'; ${elSource.value}\nreturn frame_light; })()`
   try {
     frame_light = eval?.(s)
+    frameCount = 0
   } catch (e) {
     console.log(e)
     return
@@ -48,14 +54,17 @@ const refresh = (timestamp) => {
     while (n > INTERVAL * 2) {
       n -= INTERVAL
       frame_light()
+      frameCount++
     }
     if (n > INTERVAL) {
       n -= INTERVAL
       const [r, g, b] = frame_light()
+      frameCount++
       const rs = Math.max(0, Math.min(255, Math.round(r))).toString(16).padStart(2, '0')
       const gs = Math.max(0, Math.min(255, Math.round(g))).toString(16).padStart(2, '0')
       const bs = Math.max(0, Math.min(255, Math.round(b))).toString(16).padStart(2, '0')
       circle.style.background = `#${rs}${gs}${bs}`
+      elDisplay.innerText = `#${rs}${gs}${bs} (frame: ${frameCount})`
     }
   }
   requestAnimationFrame(refresh)
