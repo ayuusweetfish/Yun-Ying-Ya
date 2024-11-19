@@ -1,12 +1,9 @@
 #include "main.h"
 
-#include "esp_http_client.h"
 #include "esp_log.h"
+#include "esp_http_client.h"
 #include "esp_tls.h"
-
-#define WEB_SERVER "example.com"
-#define WEB_PORT "80"
-#define WEB_PATH "/"
+#include "esp_crt_bundle.h"
 
 #define MAX_HTTP_OUTPUT_BUFFER 2048
 #define TAG "HTTP client"
@@ -112,15 +109,16 @@ void http_get_task(void *_unused)
 
   esp_err_t err;
   esp_http_client_handle_t client = esp_http_client_init(&(esp_http_client_config_t){
-    .url = "http://example.com/",
+    .url = "https://ayu.land/",
     .auth_type = HTTP_AUTH_TYPE_NONE,
-    .transport_type = HTTP_TRANSPORT_OVER_TCP,
+    .transport_type = HTTP_TRANSPORT_OVER_SSL,
+    .crt_bundle_attach = esp_crt_bundle_attach,
     .event_handler = http_event_handler,
     .user_data = local_response_buffer,
   });
 
   while (1) {
-    esp_http_client_set_url(client, "http://example.com/");
+    esp_http_client_set_url(client, "https://ayu.land/"),
     esp_http_client_set_method(client, HTTP_METHOD_GET);
     err = esp_http_client_perform(client);
 
