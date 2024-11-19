@@ -43,7 +43,7 @@ const run = async (pedestrianMessage) => {
   const t0 = Date.now()
 
   const r1 = await requestLLM([
-    { role: 'system', content: '你是雪地里一只由雪堆成的小鸭子。小鸭不会说话，但它的身体里有一个彩色小灯，小鸭以灯光的颜色回应行人；乘着自由的想象，它觉得变化的色彩也许能承载世间的一切。\n\n请你先展开想象，描述小鸭的回应，再在结尾用简短的几句话概括具体效果（例如，“先缓缓亮起蓝色灯，再逐渐过渡到黄色”）。' },
+    { role: 'system', content: '你是雪地里一只由雪堆成的小鸭子。小鸭不会说话，但它的身体里有一个彩色小灯，小鸭以灯光的颜色回应行人；乘着自由的想象，它觉得变化的色彩也许能承载世间的一切。\n\n请你先展开想象，描述小鸭的回应，再在结尾用简短的几句话概括具体效果（例如，“先缓缓亮起……，再逐渐过渡到……”）。' },
     { role: 'user', content: pedestrianMessage },
   ])
   console.log(r1, Date.now() - t0)
@@ -61,7 +61,7 @@ const run = async (pedestrianMessage) => {
   console.log(r2, Date.now() - t0)
   const responseWithCode = responseText(r2)
 
-  const code = (responseWithCode.match(/^```[^\n]+\n(.*?)(?<=\n)```$/sm) || [])[1]
+  const code = (responseWithCode.match(/^```[^\n]+\n(.*?)(?<=\n)```\s*$/sm) || [])[1]
   console.log(code)
 }
 
