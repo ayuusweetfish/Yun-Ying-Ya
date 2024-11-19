@@ -1,24 +1,14 @@
 #include "main.h"
 
-#include <stdio.h>
-#include "sdkconfig.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
-#include "freertos/task.h"
 #include "esp_event.h"
-#include "esp_flash.h"
 #include "esp_log.h"
-#include "esp_system.h"
-
 #include "esp_wifi.h"
 
-#include "lwip/dns.h"
-#include "lwip/err.h"
-#include "lwip/netdb.h"
-#include "lwip/sys.h"
+#include "wifi_cred.h"
+#if !defined(EXAMPLE_ESP_WIFI_SSID) || !defined(EXAMPLE_ESP_WIFI_PASS)
+#error "Define EXAMPLE_ESP_WIFI_SSID and EXAMPLE_ESP_WIFI_PASS in wifi_cred.h"
+#endif
 
-#define EXAMPLE_ESP_WIFI_SSID      "Future Lab-6F"
-#define EXAMPLE_ESP_WIFI_PASS      "--"
 #define EXAMPLE_ESP_MAXIMUM_RETRY  5
 
 #define ESP_WIFI_SAE_MODE WPA3_SAE_PWE_BOTH
