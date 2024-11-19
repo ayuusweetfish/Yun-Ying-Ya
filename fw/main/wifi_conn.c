@@ -3,17 +3,33 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "esp_eap_client.h"
+#include <string.h>
 
 #include "wifi_cred.h"
-#if !defined(EXAMPLE_ESP_WIFI_SSID) || !defined(EXAMPLE_ESP_WIFI_PASS)
-#error "Define EXAMPLE_ESP_WIFI_SSID and EXAMPLE_ESP_WIFI_PASS in wifi_cred.h"
+// EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS or
+// EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_EAP_USER, EXAMPLE_ESP_WIFI_EAP_PASS
+#if defined(EXAMPLE_ESP_WIFI_EAP_USER) && defined(EXAMPLE_ESP_WIFI_EAP_PASS)
+  #define PEAP 1
+  #ifndef EXAMPLE_ESP_WIFI_EAP_ANON
+  #define EXAMPLE_ESP_WIFI_EAP_ANON "user@example.com"
+  #endif
+#else
+  #define PEAP 0
+#endif
+#if !defined(EXAMPLE_ESP_WIFI_SSID) || (!defined(EXAMPLE_ESP_WIFI_PASS) && !PEAP)
+  #error "Define EXAMPLE_ESP_WIFI_SSID and EXAMPLE_ESP_WIFI_PASS in wifi_cred.h"
 #endif
 
 #define EXAMPLE_ESP_MAXIMUM_RETRY  5
 
 #define ESP_WIFI_SAE_MODE WPA3_SAE_PWE_BOTH
 #define EXAMPLE_H2E_IDENTIFIER "PASSWORD IDENTIFIER"
-#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
+#if PEAP
+  #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_ENTERPRISE
+#else
+  #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
+#endif
 
 /* FreeRTOS event group to signal when we are connected*/
 static EventGroupHandle_t s_wifi_event_group;
@@ -34,6 +50,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 {
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
     esp_wifi_connect();
+    ESP_LOGI(TAG, "starting");
   } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
     if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
       esp_wifi_connect();
@@ -42,7 +59,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
     } else {
       xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
     }
-    ESP_LOGI(TAG,"connect to the AP fail");
+    ESP_LOGI(TAG, "disconnected from AP");
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
     ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
@@ -79,19 +96,30 @@ void wifi_init_sta(void)
   wifi_config_t wifi_config = {
     .sta = {
       .ssid = EXAMPLE_ESP_WIFI_SSID,
-      .password = EXAMPLE_ESP_WIFI_PASS,
       /* Authmode threshold resets to WPA2 as default if password matches WPA2 standards (password len => 8).
        * If you want to connect the device to deprecated WEP/WPA networks, Please set the threshold value
        * to WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK and set the password with length and format matching to
        * WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK standards.
        */
       .threshold.authmode = ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD,
+    #if !PEAP
+      .password = EXAMPLE_ESP_WIFI_PASS,
       .sae_pwe_h2e = ESP_WIFI_SAE_MODE,
       .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
+    #endif
     },
   };
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
+
+#if PEAP
+  ESP_ERROR_CHECK(esp_eap_client_set_identity((uint8_t *)EXAMPLE_ESP_WIFI_EAP_ANON, strlen(EXAMPLE_ESP_WIFI_EAP_ANON)));
+  ESP_ERROR_CHECK(esp_eap_client_set_username((uint8_t *)EXAMPLE_ESP_WIFI_EAP_USER, strlen(EXAMPLE_ESP_WIFI_EAP_USER)));
+  ESP_ERROR_CHECK(esp_eap_client_set_password((uint8_t *)EXAMPLE_ESP_WIFI_EAP_PASS, strlen(EXAMPLE_ESP_WIFI_EAP_PASS)));
+  ESP_ERROR_CHECK(esp_eap_client_set_ttls_phase2_method(ESP_EAP_TTLS_PHASE2_MSCHAPV2));
+  ESP_ERROR_CHECK(esp_wifi_sta_enterprise_enable());
+#endif
+
   ESP_ERROR_CHECK(esp_wifi_start() );
 
   ESP_LOGI(TAG, "wifi_init_sta finished.");
@@ -108,11 +136,9 @@ void wifi_init_sta(void)
   /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
    * happened. */
   if (bits & WIFI_CONNECTED_BIT) {
-    ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
-             EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+    ESP_LOGI(TAG, "connected to ap SSID:%s", EXAMPLE_ESP_WIFI_SSID);
   } else if (bits & WIFI_FAIL_BIT) {
-    ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
-             EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+    ESP_LOGI(TAG, "Failed to connect to SSID:%s", EXAMPLE_ESP_WIFI_SSID);
   } else {
     ESP_LOGE(TAG, "UNEXPECTED EVENT");
   }
