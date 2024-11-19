@@ -12,7 +12,7 @@
 #if defined(EXAMPLE_ESP_WIFI_EAP_USER) && defined(EXAMPLE_ESP_WIFI_EAP_PASS)
   #define PEAP 1
   #ifndef EXAMPLE_ESP_WIFI_EAP_ANON
-  #define EXAMPLE_ESP_WIFI_EAP_ANON "user@example.com"
+  #define EXAMPLE_ESP_WIFI_EAP_ANON "user@tsinghua.edu.cn"
   #endif
 #else
   #define PEAP 0
@@ -93,6 +93,9 @@ void wifi_init_sta(void)
                                                       NULL,
                                                       &instance_got_ip));
 
+  esp_log_level_set("wifi", ESP_LOG_VERBOSE);
+  esp_log_level_set("eap", ESP_LOG_VERBOSE);
+
   wifi_config_t wifi_config = {
     .sta = {
       .ssid = EXAMPLE_ESP_WIFI_SSID,
@@ -116,7 +119,6 @@ void wifi_init_sta(void)
   ESP_ERROR_CHECK(esp_eap_client_set_identity((uint8_t *)EXAMPLE_ESP_WIFI_EAP_ANON, strlen(EXAMPLE_ESP_WIFI_EAP_ANON)));
   ESP_ERROR_CHECK(esp_eap_client_set_username((uint8_t *)EXAMPLE_ESP_WIFI_EAP_USER, strlen(EXAMPLE_ESP_WIFI_EAP_USER)));
   ESP_ERROR_CHECK(esp_eap_client_set_password((uint8_t *)EXAMPLE_ESP_WIFI_EAP_PASS, strlen(EXAMPLE_ESP_WIFI_EAP_PASS)));
-  ESP_ERROR_CHECK(esp_eap_client_set_ttls_phase2_method(ESP_EAP_TTLS_PHASE2_MSCHAPV2));
   ESP_ERROR_CHECK(esp_wifi_sta_enterprise_enable());
 #endif
 
