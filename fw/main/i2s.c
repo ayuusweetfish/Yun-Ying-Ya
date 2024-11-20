@@ -2,6 +2,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "esp_log.h"
+#include "driver/gpio.h"
 #include "driver/i2s_std.h"
 
 static const char *TAG = "I2S";
@@ -55,6 +56,8 @@ void i2s_init()
    * update to right here to show how to change the default configuration */
   rx_std_cfg.slot_cfg.slot_mask = I2S_STD_SLOT_RIGHT;
   ESP_ERROR_CHECK(i2s_channel_init_std_mode(rx_chan, &rx_std_cfg));
+
+  gpio_set_pull_mode(GPIO_NUM_17, GPIO_PULLDOWN_ONLY);
 
   xTaskCreate(i2s_example_read_task, "i2s_example_read_task", 4096, NULL, 5, NULL);
 }
