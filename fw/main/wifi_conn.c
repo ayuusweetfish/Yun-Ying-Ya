@@ -68,6 +68,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,
   }
 }
 
+extern uint8_t ca_pem_start[] asm("_binary_ca_pem_start");
+extern uint8_t ca_pem_end[]   asm("_binary_ca_pem_end");
+
 void wifi_init_sta(void)
 {
   s_wifi_event_group = xEventGroupCreate();
@@ -94,6 +97,7 @@ void wifi_init_sta(void)
                                                       &instance_got_ip));
 
   esp_log_level_set("wifi", ESP_LOG_VERBOSE);
+  esp_log_level_set("wpa", ESP_LOG_VERBOSE);
   esp_log_level_set("eap", ESP_LOG_VERBOSE);
 
   wifi_config_t wifi_config = {
@@ -116,6 +120,7 @@ void wifi_init_sta(void)
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
 
 #if PEAP
+  ESP_ERROR_CHECK(esp_eap_client_set_ca_cert(ca_pem_start, ca_pem_end - ca_pem_start));
   ESP_ERROR_CHECK(esp_eap_client_set_identity((uint8_t *)EXAMPLE_ESP_WIFI_EAP_ANON, strlen(EXAMPLE_ESP_WIFI_EAP_ANON)));
   ESP_ERROR_CHECK(esp_eap_client_set_username((uint8_t *)EXAMPLE_ESP_WIFI_EAP_USER, strlen(EXAMPLE_ESP_WIFI_EAP_USER)));
   ESP_ERROR_CHECK(esp_eap_client_set_password((uint8_t *)EXAMPLE_ESP_WIFI_EAP_PASS, strlen(EXAMPLE_ESP_WIFI_EAP_PASS)));
