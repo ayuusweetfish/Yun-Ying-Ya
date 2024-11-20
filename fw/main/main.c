@@ -42,6 +42,11 @@ void app_main(void)
 
   printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 
+  uint8_t *psram_buf = heap_caps_malloc(1048576, MALLOC_CAP_SPIRAM);
+  psram_buf[1000000] = 0xAA;
+  printf("PSRAM buffer %p\n", psram_buf);
+  ESP_LOG_BUFFER_HEX("main", psram_buf + 999980, 100);
+
   // Initialize NVS
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
