@@ -37,7 +37,7 @@ void i2s_init()
   ESP_ERROR_CHECK(i2s_new_channel(&rx_chan_cfg, NULL, &rx_chan));
 
   i2s_std_config_t rx_std_cfg = {
-    .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(44100),
+    .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(16000),
     .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_32BIT, I2S_SLOT_MODE_MONO),
     .gpio_cfg = {
       .mclk = I2S_GPIO_UNUSED,
@@ -59,5 +59,19 @@ void i2s_init()
 
   gpio_set_pull_mode(GPIO_NUM_17, GPIO_PULLDOWN_ONLY);
 
-  xTaskCreate(i2s_example_read_task, "i2s_example_read_task", 4096, NULL, 5, NULL);
+  // xTaskCreate(i2s_example_read_task, "i2s_example_read_task", 4096, NULL, 5, NULL);
+}
+
+esp_err_t i2s_enable()
+{
+  return i2s_channel_enable(rx_chan);
+}
+
+esp_err_t i2s_read(int32_t *buf, size_t *n, size_t max_n)
+{
+  size_t read_bytes;
+  esp_err_t result = i2s_channel_read(rx_chan, buf + *n, (max_n - *n) * sizeof(int32_t), &read_bytes, 1000);
+  if (result != ESP_OK) return result;
+  *n += read_bytes / sizeof(int32_t);
+  return ESP_OK;
 }

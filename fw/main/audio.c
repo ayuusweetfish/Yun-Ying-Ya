@@ -18,7 +18,7 @@ static const char *TAG = "Audio";
 
 static esp_afe_sr_data_t *afe_data = NULL;
 
-// esp-sr@c2a76ff/test_apps/esp-sr/main/test_afe.cpp
+static void audio_task(void *_unused);
 
 void audio_init()
 {
@@ -27,7 +27,7 @@ void audio_init()
   nsnet_name = esp_srmodel_filter(models, ESP_NSNET_PREFIX, NULL);
   printf("nsnet_name: %s\n", nsnet_name ? nsnet_name : "(null)");
 
-  const esp_afe_sr_iface_t *afe_handle = (esp_afe_sr_iface_t *)&ESP_AFE_SR_HANDLE;
+  const esp_afe_sr_iface_t *afe_handle = &ESP_AFE_SR_HANDLE;
   afe_config_t afe_config = AFE_CONFIG_DEFAULT();
   afe_config.aec_init = false;
   afe_config.vad_init = false;
@@ -44,20 +44,35 @@ void audio_init()
     return;
   }
 
+  xTaskCreate(audio_task, "audio_task", 8192, NULL, 5, NULL);
+}
+
+void audio_task(void *_unused)
+{
+  const esp_afe_sr_iface_t *afe_handle = &ESP_AFE_SR_HANDLE;
+
   int sample_per_ms = 16;
   int feed_chunksize = afe_handle->get_feed_chunksize(afe_data);
+  int fetch_chunksize = afe_handle->get_fetch_chunksize(afe_data);
   int total_nch = afe_handle->get_total_channel_num(afe_data);
   int16_t *i2s_buff = (int16_t *) malloc(feed_chunksize * sizeof(int16_t) * total_nch * 8);
   assert(i2s_buff);
-  ESP_LOGI(TAG, "feed task start, feed_chunksize = %d, total_nch = %d\n", feed_chunksize, total_nch);
+  ESP_LOGI(TAG, "feed task start, feed_chunksize = %d, total_nch = %d, fetch_chunksize = %d\n", feed_chunksize, total_nch, fetch_chunksize);
 
+  ESP_ERROR_CHECK(i2s_enable());
+
+  size_t buf_size = 16000;
+  size_t n = 0;
+  static int32_t r_buf[16000];
   while (1) {
+    ESP_ERROR_CHECK(i2s_read(r_buf, &n, buf_size));
+    if (n == buf_size) {
+      ESP_LOGI(TAG, "Second!");
+      n = 0;
+    }
+
     afe_handle->feed(afe_data, i2s_buff);
     vTaskDelay((feed_chunksize / sample_per_ms) / portTICK_PERIOD_MS);
+    // afe_fetch_result_t *fetch_result = afe_handle->fetch(afe_data);
   }
-  if (i2s_buff) {
-    free(i2s_buff);
-  }
-  ESP_LOGI(TAG, "feed task quit\n");
-  vTaskDelete(NULL);
 }
