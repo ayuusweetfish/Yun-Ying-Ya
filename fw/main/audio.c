@@ -25,7 +25,7 @@ void audio_init()
   srmodel_list_t *models = esp_srmodel_init("model");
   char *nsnet_name = NULL;
   nsnet_name = esp_srmodel_filter(models, ESP_NSNET_PREFIX, NULL);
-  printf("nsnet_name: %s\n", nsnet_name ? nsnet_name : "(null)");
+  ESP_LOGI(TAG, "nsnet_name: %s", nsnet_name ? nsnet_name : "(null)");
 
   const esp_afe_sr_iface_t *afe_handle = &ESP_AFE_SR_HANDLE;
   afe_config_t afe_config = AFE_CONFIG_DEFAULT();
@@ -40,39 +40,45 @@ void audio_init()
 
   afe_data = afe_handle->create_from_config(&afe_config);
   if (!afe_data) {
-    printf("afe_data is null!\n");
+    ESP_LOGE(TAG, "afe_data is null!");
     return;
   }
 
-  xTaskCreate(audio_task, "audio_task", 8192, NULL, 5, NULL);
+  xTaskCreate(audio_task, "audio_task", 16384, NULL, 5, NULL);
 }
 
 void audio_task(void *_unused)
 {
   const esp_afe_sr_iface_t *afe_handle = &ESP_AFE_SR_HANDLE;
 
-  int sample_per_ms = 16;
   int feed_chunksize = afe_handle->get_feed_chunksize(afe_data);
   int fetch_chunksize = afe_handle->get_fetch_chunksize(afe_data);
   int total_nch = afe_handle->get_total_channel_num(afe_data);
-  int16_t *i2s_buff = (int16_t *) malloc(feed_chunksize * sizeof(int16_t) * total_nch * 8);
-  assert(i2s_buff);
-  ESP_LOGI(TAG, "feed task start, feed_chunksize = %d, total_nch = %d, fetch_chunksize = %d\n", feed_chunksize, total_nch, fetch_chunksize);
+  assert(total_nch == 1);
+  ESP_LOGI(TAG, "feed task start, feed_chunksize = %d, total_nch = %d, fetch_chunksize = %d", feed_chunksize, total_nch, fetch_chunksize);
 
   ESP_ERROR_CHECK(i2s_enable());
 
-  size_t buf_size = 16000;
+  size_t buf_count = feed_chunksize * total_nch;
   size_t n = 0;
-  static int32_t r_buf[16000];
+  int32_t *buf32 = malloc(sizeof(int32_t) * buf_count);
+  int16_t *buf16 = malloc(sizeof(int16_t) * buf_count);
+  int feed_count = 0;
   while (1) {
-    ESP_ERROR_CHECK(i2s_read(r_buf, &n, buf_size));
-    if (n == buf_size) {
-      ESP_LOGI(TAG, "Second!");
+    ESP_ERROR_CHECK(i2s_read(buf32, &n, buf_count));
+    if (n == buf_count) {
+      // ESP_LOGI(TAG, "feed %u sample frames", buf_count);
+      for (int i = 0; i < buf_count; i++) buf16[i] = buf32[i] >> 16;
+      afe_handle->feed(afe_data, buf16);
       n = 0;
+      feed_count += buf_count;
     }
 
-    afe_handle->feed(afe_data, i2s_buff);
-    vTaskDelay((feed_chunksize / sample_per_ms) / portTICK_PERIOD_MS);
-    // afe_fetch_result_t *fetch_result = afe_handle->fetch(afe_data);
+    if (feed_count >= fetch_chunksize) {
+      afe_fetch_result_t *fetch_result = afe_handle->fetch(afe_data);
+      ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f", fetch_result->data_size, fetch_result->data_volume);
+      assert(fetch_result->data_size == fetch_chunksize * sizeof(int16_t));
+      feed_count -= fetch_chunksize;
+    }
   }
 }
