@@ -57,6 +57,7 @@ void app_main(void)
   }
   ESP_ERROR_CHECK(ret);
 
+if (0) {
   ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
   wifi_init_sta();
 
@@ -80,6 +81,9 @@ void app_main(void)
   ESP_ERROR_CHECK(esp_timer_start_periodic(nvs_update_timer, 86400000000ULL));
 
   xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, NULL);
+}
+
+  audio_init();
 
   while (1) {
     printf("Tick\n");
