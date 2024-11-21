@@ -23,9 +23,6 @@ static void audio_task(void *_unused);
 void audio_init()
 {
   srmodel_list_t *models = esp_srmodel_init("model");
-  char *nsnet_name = NULL;
-  nsnet_name = esp_srmodel_filter(models, ESP_NSNET_PREFIX, NULL);
-  ESP_LOGI(TAG, "nsnet_name: %s", nsnet_name ? nsnet_name : "(null)");
   char *wakenet_name = NULL;
   wakenet_name = esp_srmodel_filter(models, ESP_WN_PREFIX, NULL);
   ESP_LOGI(TAG, "wakenet_name: %s", wakenet_name ? wakenet_name : "(null)");
@@ -37,7 +34,7 @@ void audio_init()
   afe_config.wakenet_init = true;
   afe_config.wakenet_model_name = wakenet_name;
   afe_config.afe_ns_mode = NS_MODE_SSP;
-  afe_config.afe_ns_model_name = nsnet_name;
+  afe_config.afe_ns_model_name = NULL;
   afe_config.pcm_config.total_ch_num = 1;
   afe_config.pcm_config.mic_num = 1;
   afe_config.pcm_config.ref_num = 0;
@@ -80,7 +77,9 @@ void audio_task(void *_unused)
 
     if (feed_count >= fetch_chunksize) {
       afe_fetch_result_t *fetch_result = afe_handle->fetch(afe_data);
-      // ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f, wakeup_state = %d", fetch_result->data_size, fetch_result->data_volume, (int)fetch_result->wakeup_state);
+      static int n = 0;
+      if ((n = (n + 1) % 16) == 15)
+        ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f, wakeup_state = %d", fetch_result->data_size, fetch_result->data_volume, (int)fetch_result->wakeup_state);
       if (fetch_result->wakeup_state == WAKENET_DETECTED)
         ESP_LOGI(TAG, "Wake up word detected");
       assert(fetch_result->data_size == fetch_chunksize * sizeof(int16_t));
