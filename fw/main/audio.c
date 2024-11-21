@@ -32,9 +32,8 @@ void audio_init()
   afe_config.aec_init = false;
   afe_config.vad_init = false;
   afe_config.wakenet_init = false;
-  afe_config.afe_ns_mode = NS_MODE_NET; // AFE_SR: Ns net mode does not supported ESP_AFE_SR_HANDLE!
+  afe_config.afe_ns_mode = NS_MODE_SSP;
   afe_config.afe_ns_model_name = nsnet_name;
-  afe_config.memory_alloc_mode = AFE_MEMORY_ALLOC_MORE_PSRAM;
   afe_config.pcm_config.total_ch_num = 1;
   afe_config.pcm_config.mic_num = 1;
   afe_config.pcm_config.ref_num = 0;
@@ -48,7 +47,7 @@ void audio_init()
   int sample_per_ms = 16;
   int feed_chunksize = afe_handle->get_feed_chunksize(afe_data);
   int total_nch = afe_handle->get_total_channel_num(afe_data);
-  int16_t *i2s_buff = (int16_t *) malloc(feed_chunksize * sizeof(int16_t) * total_nch);
+  int16_t *i2s_buff = (int16_t *) malloc(feed_chunksize * sizeof(int16_t) * total_nch * 8);
   assert(i2s_buff);
   ESP_LOGI(TAG, "feed task start, feed_chunksize = %d, total_nch = %d\n", feed_chunksize, total_nch);
 
