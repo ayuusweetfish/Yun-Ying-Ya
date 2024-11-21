@@ -83,15 +83,6 @@ void wifi_init_sta(void)
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-  uint8_t mac[6];
-  esp_err_t mac_result = esp_wifi_get_mac(WIFI_IF_STA, mac);
-  if (mac_result == ESP_OK) {
-    ESP_LOGI(TAG, "MAC address %02x:%02x:%02x:%02x:%02x:%02x",
-      mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  } else {
-    ESP_LOGI(TAG, "Cannot get MAC address");
-  }
-
   esp_event_handler_instance_t instance_any_id;
   esp_event_handler_instance_t instance_got_ip;
   ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
@@ -117,8 +108,8 @@ void wifi_init_sta(void)
        * to WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK and set the password with length and format matching to
        * WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK standards.
        */
-    #if !PEAP
       .threshold.authmode = ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD,
+    #if !PEAP
       .password = EXAMPLE_ESP_WIFI_PASS,
       .sae_pwe_h2e = ESP_WIFI_SAE_MODE,
       .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
