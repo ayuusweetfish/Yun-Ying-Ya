@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>   // time
+#include <unistd.h> // getpass
 
 // ============ MD5 / MD5-HMAC ============
 
@@ -474,7 +476,7 @@ void xxtea_what(uint32_t* v, size_t n, const uint32_t k[4])
 
 // ============ Base64 ============
 
-static void base64_encode(char *restrict out, const uint8_t *restrict a, size_t n)
+static void base64_encode_urlcomponent(char *restrict out, const uint8_t *restrict a, size_t n)
 {
   const char *alphabet = "LVoJPiCN2R8G90yg+hmFHuacZ1OWMnrsSTXkYpUq/3dlbfKwv6xztjI7DeBE45QA";
   size_t p = 0;
@@ -482,55 +484,26 @@ static void base64_encode(char *restrict out, const uint8_t *restrict a, size_t 
     uint32_t x = ((uint32_t)a[i] << 16);
     if (i + 1 < n) x |= ((uint32_t)a[i + 1] <<  8);
     if (i + 2 < n) x |= ((uint32_t)a[i + 2] <<  0);
-    for (int j = 0; j < 4; j++)
-      out[p++] = (i * 4 + j * 3 > n * 4) ? '=' : alphabet[(x >> (6 * (3 - j))) & 0x3f];
+    for (int j = 0; j < 4; j++) {
+      char c = (i * 4 + j * 3 > n * 4) ? '=' : alphabet[(x >> (6 * (3 - j))) & 0x3f];
+      if (c == '+')      { out[p++] = '%'; out[p++] = '2'; out[p++] = 'B'; }
+      else if (c == '/') { out[p++] = '%'; out[p++] = '2'; out[p++] = 'F'; }
+      else               { out[p++] = c; }
+    }
   }
   out[p] = '\0';
 }
 
-int main_1()
-{
-  {
-    uint8_t k[64] = "4b9dc87509da5f76dae843b57b34601df9a6f342f0d72fc400eee82504a2a21c";
-    uint8_t hmac[16];
-    md5_hmac(k, 64, k, 0, hmac);
-    for (int i = 0; i < 16; i++) printf("%02"PRIx8, hmac[i]);
-    putchar('\n');
-    // dea0fdce03e94fae80f2fd56a3067d31
-  }
-
-  {
-    uint8_t s[3] = "abc";
-    uint8_t digest[20];
-    SHA1(digest, s, 3);
-    for (int i = 0; i < 20; i++) printf("%02"PRIx8, digest[i]);
-    putchar('\n');
-    // a9993e364706816aba3e25717850c26c9cd0d89d
-  }
-
-  {
-    uint32_t v[2] = {0x00333231, 0x00000003};
-    uint32_t k[4] = {0x64396234, 0x35373863, 0x61643930, 0x36376635};
-
-    xxtea_what(v, 2, k);
-    printf("%08"PRIx32" %08"PRIx32"\n", v[0], v[1]);
-    // f698c032 d0cbd018
-  }
-
-  return 0;
-}
-
-void net_tsinghua_login(
-  const uint8_t token[64],
+const char *net_tsinghua_login_sign(
+  const char token[64],
   const char *username,
   const char *password,
-  const char *ip,
   int ac_id)
 {
   // Argument "password"
   // = MD5-HMAC(token, <empty>)
   uint8_t hmac[16];
-  md5_hmac(token, 64, token, 0, hmac);
+  md5_hmac((uint8_t *)token, 64, (uint8_t *)token, 0, hmac);
 
   uint8_t hmac_hex[33];
   for (int i = 0; i < 16; i++) {
@@ -538,43 +511,32 @@ void net_tsinghua_login(
     hmac_hex[i * 2 + 1] = "0123456789abcdef"[hmac[i] & 0xf];
   }
   hmac_hex[32] = '\0';
-  printf("HMAC: {MD5}%s\n", hmac_hex);
-  // HMAC: {MD5}d924ca7c0a0742ef46c41660140359aa
 
   // Argument "info"
   // = Base64(XXTEA'(<JSON>, token))
-  uint8_t info_json[256] = { 0 };
+  static uint8_t info_json[128] = { 0 };
   int info_json_len = snprintf((char *)info_json, sizeof info_json,
-    "{\"username\":\"%s\",\"password\":\"%s\",\"ip\":\"%s\",\"acid\":\"%d\",\"enc_ver\":\"srun_bx1\"}",
-    username, password, ip, ac_id);
-  printf("JSON: %s (length %d)\n", (char *)info_json, info_json_len);
-  // JSON: {"username":"user","password":"qwqwq","ip":"","acid":"1","enc_ver":"srun_bx1"}
+    "{\"username\":\"%s\",\"password\":\"%s\",\"ip\":\"\",\"acid\":\"%d\",\"enc_ver\":\"srun_bx1\"}",
+    username, password, ac_id);
   int n_u32 = (info_json_len + 3) / 4;
   ((uint32_t *)info_json)[n_u32] = info_json_len;
-  // for (int i = 0; i < n_u32 + 1; i++) printf("%2d: %08"PRIx32"\n", i, ((uint32_t *)info_json)[i]);
-  // for (int i = 0; i < 16; i++) printf("%2d: %08"PRIx32"\n", i, ((uint32_t *)token)[i]);
   xxtea_what((uint32_t *)info_json, n_u32 + 1, (const uint32_t *)token);
-  // for (int i = 0; i < n_u32 + 1; i++) printf("%2d: %08"PRIx32"\n", i, ((uint32_t *)info_json)[i]);
 
-  char base64_info_json[256];
-  base64_encode(base64_info_json, info_json, (n_u32 + 1) * 4);
-  printf("XXTEA encrypted: %s\n", base64_info_json);
-  // XXTEA encrypted: 3/7nJUYJHy//+QRKhh6IotujLMWcEvAwVEkVgyJHZmnsZ/T4JVCqaVbO08n+Bl5fQijyqLZ/34fmdFRaFXb3NmzZ1zoUYxYQwsJBwJebCPSLpm1J
+  char base64_info_json[(128 + 2) / 3 * 4 * 3 + 1];
+  base64_encode_urlcomponent(base64_info_json, info_json, (n_u32 + 1) * 4);
 
   // Argument "chksum"
   // = SHA1(<...>)
-  uint8_t checksum_str[1024];
+  static uint8_t checksum_str[1024];
   int checksum_str_len = snprintf((char *)checksum_str, sizeof checksum_str,
-    "%s%s%s%s%s%d%s%s%s200%s1%s{SRBX1}%s",
+    "%s%s%s%s%s%d%s%s200%s1%s{SRBX1}%s",
     token, username,
     token, hmac_hex,
     token, ac_id,
-    token, ip,
-    token,
-    token,
+    token,  // ip
+    token,  // n
+    token,  // type
     token, base64_info_json);
-  printf("Checksummed string: %s\n", (char *)checksum_str);
-  // Checksummed string: f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842userf020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842d924ca7c0a0742ef46c41660140359aaf020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c128421f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842200f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c128421f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842{SRBX1}3/7nJUYJHy//+QRKhh6IotujLMWcEvAwVEkVgyJHZmnsZ/T4JVCqaVbO08n+Bl5fQijyqLZ/34fmdFRaFXb3NmzZ1zoUYxYQwsJBwJebCPSLpm1J
   uint8_t checksum[20];
   SHA1(checksum, checksum_str, checksum_str_len);
 
@@ -584,17 +546,40 @@ void net_tsinghua_login(
     checksum_hex[i * 2 + 1] = "0123456789abcdef"[checksum[i] & 0xf];
   }
   checksum_hex[40] = '\0';
-  printf("Checksum: %s\n", checksum_hex);
-  // Checksum: 57fd81eef80027444e6f7d50bb6b1d53dc6bc340
+
+  static char out_query[1024];
+  snprintf(out_query, sizeof out_query,
+/*
+    "https://auth4.tsinghua.edu.cn/cgi-bin/srun_portal?"
+    "username=%s&ac_id=%d&ip=&double_stack=1&mac=&type=1&n=200"
+    "&action=login"
+    "&callback=f"
+    "&password=%%7BMD5%%7D%s"
+    "&info=%%7BSRBX1%%7D%s"
+    "&checksum=%s"
+    "&_=%lu",
+    username, ac_id,
+    hmac_hex, base64_info_json, checksum_hex,
+    (unsigned long)time(NULL) * 1000
+*/
+
+    "https://auth4.tsinghua.edu.cn/cgi-bin/srun_portal?callback=jQuery1113004686144420895455_1732443952216&action=login&username=%s&password=%%7BMD5%%7D%s&ac_id=%d&ip=&double_stack=1&mac=&info=%%7BSRBX1%%7D%s&chksum=%s&n=200&type=1&_=%lu",
+    username, hmac_hex, ac_id, base64_info_json, checksum_hex,
+    (unsigned long)time(NULL) * 1000
+  );
+  return out_query;
 }
 
 int main()
 {
-  uint8_t token[128];
-  // printf("token: ");
-  // scanf("%s", (char *)token);
+  char token[128], user[128], *pwd;
+  int ac_id;
+  printf("token: "); scanf("%s", token);
+  printf("user: "); scanf("%s", user);
+  pwd = getpass("pwd: ");
+  printf("ac_id: "); scanf("%d", &ac_id);
 
-  net_tsinghua_login((const uint8_t *)"f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842", "user", "qwqwq", "", 1);
+  puts(net_tsinghua_login_sign(token, user, pwd, ac_id));
 
   return 0;
 }
