@@ -1,11 +1,11 @@
 const key = Deno.env.get('API_KEY') || prompt('API key:')
 
-const API_ENDPOINT = 'google'
-
 {
+const API_ENDPOINT = 'google'
+}
+
 const API_ENDPOINT = 'https://api.lingyiwanwu.com/v1/chat/completions'
 const API_MODEL = 'yi-lightning'
-}
 
 {
 const API_ENDPOINT = 'https://spark-api-open.xf-yun.com/v1/chat/completions'
@@ -45,7 +45,8 @@ const responseTextOpenAI = (r) => {
 
 const requestLLMGoogle = async (step, messages) => {
   // https://ai.google.dev/api/generate-content#v1beta.models.generateContent
-  const API_MODEL = (step === 1 ? 'gemini-1.5-flash' : 'gemini-1.5-pro')
+  // const API_MODEL = (step === 1 ? 'gemini-1.5-flash' : 'gemini-1.5-pro')
+  const API_MODEL = 'gemini-1.5-flash'
   const req = await fetch(
     'https://generativelanguage.googleapis.com/v1beta/models/' + API_MODEL + ':generateContent?key=' + key,
     {
@@ -99,7 +100,7 @@ const run = async (pedestrianMessage) => {
     { role: 'system', content: '你是一名交互动画工程师，正在为一盏小灯编写动画效果。你了解色彩与动画原理，认真对待细节，采用合适的混色、过渡、缓动函数等方式来实现赏心悦目的动态色彩。' },
     { role: 'user', content:
       `“${lightDescription}”\n\n` +
-      '灯珠的颜色由一个 JavaScript 函数 `frame_light()` 计算。这个函数每隔 100 ms 被调用一次，它返回三个 0~255 范围内的数值，依次表示当前时刻灯光的 R、G、B 分量。需要保存的数据可置于全局变量。只需给出你编写的 `frame_light()` 函数即可，定时调用的部分不必编写。不必给出过多的解释，但请多加注意时间与速率方面，避免过快或过慢。如果动画是循环的，请在结尾时多停留一会儿。'
+      '灯珠的颜色由一个 JavaScript 函数 `frame_light()` 产生。它可以通过函数 `output(R, G, B)` 输出颜色，参数为 0~255 范围内的数值，依次表示灯光的 R、G、B 分量。若要等待，请勿使用 `Date` 类或 `requestAnimationFrame()`；请调用 `delay(t)`，参数为等待的毫秒数。只需实现 `frame_light()` 即可，不必实现其余上述提及的函数。如果需要缓动函数，请一并编写。不必作过多的解释，但请多加注意时间与速率方面，避免过快或过慢。'
     }
   ])
   console.log(Deno.inspect(r2, { depth: 99 }), Date.now() - t0)
@@ -109,4 +110,5 @@ const run = async (pedestrianMessage) => {
   console.log(code)
 }
 
-await run('小鸭小鸭，唱首歌吧！')
+// await run('小鸭小鸭，唱首歌吧！')
+await run('小鸭小鸭，星星是什么样子的？')
