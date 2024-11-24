@@ -470,11 +470,25 @@ void xxtea_what(uint32_t* v, size_t n, const uint32_t k[4])
       z = v[p];
     }
   }
-
-  #undef MX
 }
 
-int main()
+// ============ Base64 ============
+
+static void base64_encode(char *restrict out, const uint8_t *restrict a, size_t n)
+{
+  const char *alphabet = "LVoJPiCN2R8G90yg+hmFHuacZ1OWMnrsSTXkYpUq/3dlbfKwv6xztjI7DeBE45QA";
+  size_t p = 0;
+  for (size_t i = 0; i < n; i += 3) {
+    uint32_t x = ((uint32_t)a[i] << 16);
+    if (i + 1 < n) x |= ((uint32_t)a[i + 1] <<  8);
+    if (i + 2 < n) x |= ((uint32_t)a[i + 2] <<  0);
+    for (int j = 0; j < 4; j++)
+      out[p++] = (i * 4 + j * 3 > n * 4) ? '=' : alphabet[(x >> (6 * (3 - j))) & 0x3f];
+  }
+  out[p] = '\0';
+}
+
+int main_1()
 {
   {
     uint8_t k[64] = "4b9dc87509da5f76dae843b57b34601df9a6f342f0d72fc400eee82504a2a21c";
@@ -502,6 +516,85 @@ int main()
     printf("%08"PRIx32" %08"PRIx32"\n", v[0], v[1]);
     // f698c032 d0cbd018
   }
+
+  return 0;
+}
+
+void net_tsinghua_login(
+  const uint8_t token[64],
+  const char *username,
+  const char *password,
+  const char *ip,
+  int ac_id)
+{
+  // Argument "password"
+  // = MD5-HMAC(token, <empty>)
+  uint8_t hmac[16];
+  md5_hmac(token, 64, token, 0, hmac);
+
+  uint8_t hmac_hex[33];
+  for (int i = 0; i < 16; i++) {
+    hmac_hex[i * 2 + 0] = "0123456789abcdef"[hmac[i] >> 4];
+    hmac_hex[i * 2 + 1] = "0123456789abcdef"[hmac[i] & 0xf];
+  }
+  hmac_hex[32] = '\0';
+  printf("HMAC: {MD5}%s\n", hmac_hex);
+  // HMAC: {MD5}d924ca7c0a0742ef46c41660140359aa
+
+  // Argument "info"
+  // = Base64(XXTEA'(<JSON>, token))
+  uint8_t info_json[256] = { 0 };
+  int info_json_len = snprintf((char *)info_json, sizeof info_json,
+    "{\"username\":\"%s\",\"password\":\"%s\",\"ip\":\"%s\",\"acid\":\"%d\",\"enc_ver\":\"srun_bx1\"}",
+    username, password, ip, ac_id);
+  printf("JSON: %s (length %d)\n", (char *)info_json, info_json_len);
+  // JSON: {"username":"user","password":"qwqwq","ip":"","acid":"1","enc_ver":"srun_bx1"}
+  int n_u32 = (info_json_len + 3) / 4;
+  ((uint32_t *)info_json)[n_u32] = info_json_len;
+  // for (int i = 0; i < n_u32 + 1; i++) printf("%2d: %08"PRIx32"\n", i, ((uint32_t *)info_json)[i]);
+  // for (int i = 0; i < 16; i++) printf("%2d: %08"PRIx32"\n", i, ((uint32_t *)token)[i]);
+  xxtea_what((uint32_t *)info_json, n_u32 + 1, (const uint32_t *)token);
+  // for (int i = 0; i < n_u32 + 1; i++) printf("%2d: %08"PRIx32"\n", i, ((uint32_t *)info_json)[i]);
+
+  char base64_info_json[256];
+  base64_encode(base64_info_json, info_json, (n_u32 + 1) * 4);
+  printf("XXTEA encrypted: %s\n", base64_info_json);
+  // XXTEA encrypted: 3/7nJUYJHy//+QRKhh6IotujLMWcEvAwVEkVgyJHZmnsZ/T4JVCqaVbO08n+Bl5fQijyqLZ/34fmdFRaFXb3NmzZ1zoUYxYQwsJBwJebCPSLpm1J
+
+  // Argument "chksum"
+  // = SHA1(<...>)
+  uint8_t checksum_str[1024];
+  int checksum_str_len = snprintf((char *)checksum_str, sizeof checksum_str,
+    "%s%s%s%s%s%d%s%s%s200%s1%s{SRBX1}%s",
+    token, username,
+    token, hmac_hex,
+    token, ac_id,
+    token, ip,
+    token,
+    token,
+    token, base64_info_json);
+  printf("Checksummed string: %s\n", (char *)checksum_str);
+  // Checksummed string: f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842userf020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842d924ca7c0a0742ef46c41660140359aaf020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c128421f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842200f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c128421f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842{SRBX1}3/7nJUYJHy//+QRKhh6IotujLMWcEvAwVEkVgyJHZmnsZ/T4JVCqaVbO08n+Bl5fQijyqLZ/34fmdFRaFXb3NmzZ1zoUYxYQwsJBwJebCPSLpm1J
+  uint8_t checksum[20];
+  SHA1(checksum, checksum_str, checksum_str_len);
+
+  uint8_t checksum_hex[41];
+  for (int i = 0; i < 20; i++) {
+    checksum_hex[i * 2 + 0] = "0123456789abcdef"[checksum[i] >> 4];
+    checksum_hex[i * 2 + 1] = "0123456789abcdef"[checksum[i] & 0xf];
+  }
+  checksum_hex[40] = '\0';
+  printf("Checksum: %s\n", checksum_hex);
+  // Checksum: 57fd81eef80027444e6f7d50bb6b1d53dc6bc340
+}
+
+int main()
+{
+  uint8_t token[128];
+  // printf("token: ");
+  // scanf("%s", (char *)token);
+
+  net_tsinghua_login((const uint8_t *)"f020a050676269334ae9b4a6e1200c0ca9ea6bfd5d46fc0c7abcef1358c12842", "user", "qwqwq", "", 1);
 
   return 0;
 }
