@@ -184,12 +184,9 @@ void SHA1Final(
     SHA1_CTX * context
     );
 
-void SHA1(
-    char *hash_out,
-    const char *str,
-    uint32_t len);
-
 // https://github.com/clibs/sha1/blob/master/sha1.c
+
+#define SHA1HANDSOFF
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
@@ -445,8 +442,8 @@ void SHA1Final(
 }
 
 void SHA1(
-    char *hash_out,
-    const char *str,
+    uint8_t *hash_out,
+    const uint8_t *str,
     uint32_t len)
 {
     SHA1_CTX ctx;
@@ -485,7 +482,7 @@ int main()
     md5_hmac(k, 64, k, 0, hmac);
     for (int i = 0; i < 16; i++) printf("%02"PRIx8, hmac[i]);
     putchar('\n');
-    // 9cb62fde819d45bedf5e541fc05f9eac
+    // dea0fdce03e94fae80f2fd56a3067d31
   }
 
   {
