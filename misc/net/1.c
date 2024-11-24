@@ -5,8 +5,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>   // time
-#include <unistd.h> // getpass
 
 // ============ MD5 / MD5-HMAC ============
 
@@ -119,7 +117,7 @@ static void md5(
 }
 
 // HMAC-MD5 implementation
-void md5_hmac(
+static void md5_hmac(
   const uint8_t *restrict key, size_t key_len,
   const uint8_t *restrict msg, size_t msg_len,
   uint8_t out[16])
@@ -461,7 +459,7 @@ void SHA1(
 
 // ============ XXTEA ============
 
-void xxtea_what(uint32_t* v, size_t n, const uint32_t k[4])
+static void xxtea_what(uint32_t* v, size_t n, const uint32_t k[4])
 {
   uint32_t z = v[n - 1], s = 0;
   for (size_t r = 0; r < 6 + 52 / n; r++) {
@@ -501,7 +499,7 @@ static void base64_encode(char *restrict out, const uint8_t *restrict a, size_t 
 }
 
 const char *net_tsinghua_login_sign(
-  const char token[64],
+  const char *token,
   const char *username,
   const char *password,
   int ac_id)
@@ -571,23 +569,72 @@ const char *net_tsinghua_login_sign(
   return out_query;
 }
 
+const char *net_tsinghua_request(const char *url)
+{
+  printf("[GET] %s\n", url);
+
+  // HTTP_PROXY= HTTPS_PROXY= curl `pbpaste` | tr -d '\r' | tr -d '\n' | pbcopy
+  static char s[1024];
+  gets(s);
+  return s;
+
+  if (strcmp(url, "http://3.3.3.3/") == 0) {
+    return "<html><head><script type=\"text/javascript\">location.href=\"http://auth4.tsinghua.edu.cn/index_35.html\"</script></head><body>Authentication is required. Click <a href=\"http://auth4.tsinghua.edu.cn/index_35.html\">here</a> to open the authentication page.</body></html>";
+  } else if (strcmp(url, "https://auth4.tsinghua.edu.cn/cgi-bin/get_challenge?callback=f&username=user&ip=&double_stack=1") == 0) {
+    return "f({\"challenge\":\"316f5ecb6c05123c8e25d2a9745e9e16fa0f46760c5801c55a3759cc81f315fa\",\"client_ip\":\"183.173.63.70\",\"ecode\":0,\"error\":\"ok\",\"error_msg\":\"\",\"expire\":\"43\",\"online_ip\":\"183.173.63.70\",\"res\":\"ok\",\"srun_ver\":\"SRunCGIAuthIntfSvr V1.18 B20190423\",\"st\":1732449832})";
+  } else {
+    return "";
+  }
+}
+
+int net_tsinghua_perform_login(const char *user, const char *pwd)
+{
+  const char *resp_1 = net_tsinghua_request("http://3.3.3.3/");
+  const char *ac_id_probe = "http://auth4.tsinghua.edu.cn/index_";
+  const char *ac_id_start = strstr(resp_1, ac_id_probe);
+  if (ac_id_start == NULL) return -1;
+  ac_id_start += strlen(ac_id_probe);
+
+  int ac_id = 0;
+  while (*ac_id_start >= '0' && *ac_id_start <= '9')
+    ac_id = ac_id * 10 + (*(ac_id_start++) - '0');
+
+  char url_2[256];
+  snprintf(url_2, sizeof url_2, "https://auth4.tsinghua.edu.cn/cgi-bin/get_challenge?callback=f&username=%s&ip=&double_stack=1", user);
+  const char *resp_2 = net_tsinghua_request(url_2);
+  const char *token_probe = "\"challenge\":\"";
+  const char *token_start = strstr(resp_2, token_probe);
+  if (token_start == NULL) return -2;
+  token_start += strlen(token_probe);
+
+  char token[65];
+  memcpy(token, token_start, 64);
+  token[64] = '\0';
+
+  printf("token: %s, ac_id: %d\n", token, ac_id);
+
+  const char *url_3 = net_tsinghua_login_sign(token, user, pwd, ac_id);
+  const char *resp_3 = net_tsinghua_request(url_3);
+  if (strstr(resp_3, "\"res\":\"ok\"") == NULL) return -3;
+
+  return 0;
+}
+
+#include <unistd.h> // getpass
+
 int main()
 {
-#if 0
-  const char *token = "316f5ecb6c05123c8e25d2a9745e9e16fa0f46760c5801c55a3759cc81f315fa";
+#if 1
   const char *user = "user";
   const char *pwd = "qwqwq";
-  int ac_id = 1;
 #else
   char token[128], user[128], *pwd;
-  int ac_id;
-  printf("token: "); scanf("%s", token);
   printf("user: "); scanf("%s", user);
   pwd = getpass("pwd: ");
-  printf("ac_id: "); scanf("%d", &ac_id);
+  getchar();
 #endif
-
-  puts(net_tsinghua_login_sign(token, user, pwd, ac_id));
+  int result = net_tsinghua_perform_login(user, pwd);
+  printf("%d\n", result);
 
   return 0;
 }
