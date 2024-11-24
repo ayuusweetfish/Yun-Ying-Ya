@@ -1,4 +1,6 @@
+#include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -476,7 +478,7 @@ void xxtea_what(uint32_t* v, size_t n, const uint32_t k[4])
 
 // ============ Base64 ============
 
-static void base64_encode_urlcomponent(char *restrict out, const uint8_t *restrict a, size_t n)
+static void base64_encode(char *restrict out, const uint8_t *restrict a, size_t n, bool url_component)
 {
   const char *alphabet = "LVoJPiCN2R8G90yg+hmFHuacZ1OWMnrsSTXkYpUq/3dlbfKwv6xztjI7DeBE45QA";
   size_t p = 0;
@@ -486,9 +488,13 @@ static void base64_encode_urlcomponent(char *restrict out, const uint8_t *restri
     if (i + 2 < n) x |= ((uint32_t)a[i + 2] <<  0);
     for (int j = 0; j < 4; j++) {
       char c = (i * 4 + j * 3 > n * 4) ? '=' : alphabet[(x >> (6 * (3 - j))) & 0x3f];
-      if (c == '+')      { out[p++] = '%'; out[p++] = '2'; out[p++] = 'B'; }
-      else if (c == '/') { out[p++] = '%'; out[p++] = '2'; out[p++] = 'F'; }
-      else               { out[p++] = c; }
+      if (url_component && (c == '+' || c == '/')) {
+        out[p++] = '%';
+        out[p++] = "0123456789ABCDEF"[c >> 4];
+        out[p++] = "0123456789ABCDEF"[c & 0xf];
+      } else {
+        out[p++] = c;
+      }
     }
   }
   out[p] = '\0';
@@ -518,12 +524,14 @@ const char *net_tsinghua_login_sign(
   int info_json_len = snprintf((char *)info_json, sizeof info_json,
     "{\"username\":\"%s\",\"password\":\"%s\",\"ip\":\"\",\"acid\":\"%d\",\"enc_ver\":\"srun_bx1\"}",
     username, password, ac_id);
+  assert(info_json_len < sizeof info_json);
   int n_u32 = (info_json_len + 3) / 4;
   ((uint32_t *)info_json)[n_u32] = info_json_len;
   xxtea_what((uint32_t *)info_json, n_u32 + 1, (const uint32_t *)token);
 
   char base64_info_json[(128 + 2) / 3 * 4 * 3 + 1];
-  base64_encode_urlcomponent(base64_info_json, info_json, (n_u32 + 1) * 4);
+  base64_encode(base64_info_json, info_json, (n_u32 + 1) * 4, false);
+  // Do not URL-encode, as this will be fed to the signature algorithm
 
   // Argument "chksum"
   // = SHA1(<...>)
@@ -537,6 +545,7 @@ const char *net_tsinghua_login_sign(
     token,  // n
     token,  // type
     token, base64_info_json);
+  assert(checksum_str_len < sizeof checksum_str);
   uint8_t checksum[20];
   SHA1(checksum, checksum_str, checksum_str_len);
 
@@ -547,37 +556,36 @@ const char *net_tsinghua_login_sign(
   }
   checksum_hex[40] = '\0';
 
-  static char out_query[1024];
-  snprintf(out_query, sizeof out_query,
-/*
-    "https://auth4.tsinghua.edu.cn/cgi-bin/srun_portal?"
-    "username=%s&ac_id=%d&ip=&double_stack=1&mac=&type=1&n=200"
-    "&action=login"
-    "&callback=f"
-    "&password=%%7BMD5%%7D%s"
-    "&info=%%7BSRBX1%%7D%s"
-    "&checksum=%s"
-    "&_=%lu",
-    username, ac_id,
-    hmac_hex, base64_info_json, checksum_hex,
-    (unsigned long)time(NULL) * 1000
-*/
+  // URL-encode into the final URL
+  base64_encode(base64_info_json, info_json, (n_u32 + 1) * 4, true);
 
-    "https://auth4.tsinghua.edu.cn/cgi-bin/srun_portal?callback=jQuery1113004686144420895455_1732443952216&action=login&username=%s&password=%%7BMD5%%7D%s&ac_id=%d&ip=&double_stack=1&mac=&info=%%7BSRBX1%%7D%s&chksum=%s&n=200&type=1&_=%lu",
-    username, hmac_hex, ac_id, base64_info_json, checksum_hex,
-    (unsigned long)time(NULL) * 1000
+  static char out_query[1024];
+  int out_query_len = snprintf(out_query, sizeof out_query,
+    "https://auth4.tsinghua.edu.cn/cgi-bin/srun_portal?"
+    "callback=f&action=login&ip=&double_stack=1&mac="
+    "&username=%s&password=%%7BMD5%%7D%s&ac_id=%d"
+    "&info=%%7BSRBX1%%7D%s&chksum=%s&n=200&type=1",
+    username, hmac_hex, ac_id, base64_info_json, checksum_hex
   );
+  assert(out_query_len < sizeof out_query);
   return out_query;
 }
 
 int main()
 {
+#if 0
+  const char *token = "316f5ecb6c05123c8e25d2a9745e9e16fa0f46760c5801c55a3759cc81f315fa";
+  const char *user = "user";
+  const char *pwd = "qwqwq";
+  int ac_id = 1;
+#else
   char token[128], user[128], *pwd;
   int ac_id;
   printf("token: "); scanf("%s", token);
   printf("user: "); scanf("%s", user);
   pwd = getpass("pwd: ");
   printf("ac_id: "); scanf("%d", &ac_id);
+#endif
 
   puts(net_tsinghua_login_sign(token, user, pwd, ac_id));
 
