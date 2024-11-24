@@ -56,7 +56,7 @@ void app_main(void)
   }
   ESP_ERROR_CHECK(ret);
 
-if (1) {
+if (0) {
   ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
   wifi_init_sta();
 
@@ -69,10 +69,10 @@ if (1) {
   xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, NULL);
 }
 
-  // audio_init();
+  audio_init();
 
   while (1) {
-    printf("Tick\n");
+    // printf("Tick\n");
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 
