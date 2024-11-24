@@ -8,6 +8,7 @@
 
 #include "wifi_cred.h"
 // EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS or
+// EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_AUTH_USER, EXAMPLE_ESP_WIFI_AUTH_PASS
 // EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_EAP_USER, EXAMPLE_ESP_WIFI_EAP_PASS
 #if defined(EXAMPLE_ESP_WIFI_EAP_USER) && defined(EXAMPLE_ESP_WIFI_EAP_PASS)
   #define PEAP 1
@@ -17,7 +18,14 @@
 #else
   #define PEAP 0
 #endif
-#if !defined(EXAMPLE_ESP_WIFI_SSID) || (!defined(EXAMPLE_ESP_WIFI_PASS) && !PEAP)
+
+#if defined(EXAMPLE_ESP_WIFI_AUTH_USER) && defined(EXAMPLE_ESP_WIFI_AUTH_PASS)
+  #define HTTP_AUTH 1
+#else
+  #define HTTP_AUTH 0
+#endif
+
+#if !defined(EXAMPLE_ESP_WIFI_SSID) || (!defined(EXAMPLE_ESP_WIFI_PASS) && !PEAP && !HTTP_AUTH)
   #error "Define EXAMPLE_ESP_WIFI_SSID and EXAMPLE_ESP_WIFI_PASS in wifi_cred.h"
 #endif
 
@@ -27,6 +35,8 @@
 #define EXAMPLE_H2E_IDENTIFIER "PASSWORD IDENTIFIER"
 #if PEAP
   #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_ENTERPRISE
+#elif HTTP_AUTH
+  #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_OPEN
 #else
   #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
 #endif
@@ -109,7 +119,10 @@ void wifi_init_sta(void)
        * WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK standards.
        */
       .threshold.authmode = ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD,
-    #if !PEAP
+    #if PEAP
+    #elif HTTP_AUTH
+      .password = "",
+    #else
       .password = EXAMPLE_ESP_WIFI_PASS,
       .sae_pwe_h2e = ESP_WIFI_SAE_MODE,
       .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
@@ -149,4 +162,8 @@ void wifi_init_sta(void)
   } else {
     ESP_LOGE(TAG, "UNEXPECTED EVENT");
   }
+
+#if HTTP_AUTH
+  ESP_LOGI(TAG, "Performing HTTP-based authentication");
+#endif
 }
