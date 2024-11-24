@@ -1,9 +1,11 @@
 #include "main.h"
+#include "../../misc/net/net_tsinghua.h"
 
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "esp_eap_client.h"
+#include "esp_timer.h"
 #include <string.h>
 
 #include "wifi_cred.h"
@@ -163,7 +165,30 @@ void wifi_init_sta(void)
     ESP_LOGE(TAG, "UNEXPECTED EVENT");
   }
 
+  // Update time
+  if (esp_reset_reason() == ESP_RST_POWERON) {
+    ESP_LOGI(TAG, "Updating time from NVS");
+    ESP_ERROR_CHECK(update_time_from_nvs());
+  }
+
+  const esp_timer_create_args_t nvs_update_timer_args = {
+    .callback = (void *)&fetch_and_store_time_in_nvs,
+  };
+
+  esp_timer_handle_t nvs_update_timer;
+  ESP_ERROR_CHECK(esp_timer_create(&nvs_update_timer_args, &nvs_update_timer));
+  ESP_ERROR_CHECK(esp_timer_start_periodic(nvs_update_timer, 86400000000ULL));
+
 #if HTTP_AUTH
   ESP_LOGI(TAG, "Performing HTTP-based authentication");
+  int result = net_tsinghua_perform_login(EXAMPLE_ESP_WIFI_AUTH_USER, EXAMPLE_ESP_WIFI_AUTH_PASS);
+  ESP_LOGI(TAG, "Result: %d", result);
 #endif
 }
+
+#if HTTP_AUTH
+const char *net_tsinghua_request(const char *url, const char *cookies)
+{
+  return simple_request(url, cookies);
+}
+#endif

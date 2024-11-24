@@ -8,7 +8,6 @@
 #include "esp_chip_info.h"
 #include "esp_flash.h"
 #include "esp_log.h"
-#include "esp_timer.h"
 #include "nvs_flash.h"
 
 #define TAG "main"
@@ -66,19 +65,6 @@ if (1) {
   This is esp32s3 chip with 2 CPU core(s), WiFi/BLE, silicon revision v0.2, 8MB external flash
   Minimum free heap size: 389836 bytes
 */
-
-  if (esp_reset_reason() == ESP_RST_POWERON) {
-    ESP_LOGI(TAG, "Updating time from NVS");
-    ESP_ERROR_CHECK(update_time_from_nvs());
-  }
-
-  const esp_timer_create_args_t nvs_update_timer_args = {
-    .callback = (void *)&fetch_and_store_time_in_nvs,
-  };
-
-  esp_timer_handle_t nvs_update_timer;
-  ESP_ERROR_CHECK(esp_timer_create(&nvs_update_timer_args, &nvs_update_timer));
-  ESP_ERROR_CHECK(esp_timer_start_periodic(nvs_update_timer, 86400000000ULL));
 
   xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, NULL);
 }
