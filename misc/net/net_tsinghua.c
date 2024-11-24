@@ -1,3 +1,5 @@
+#include "net_tsinghua.h"
+
 #include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -166,22 +168,22 @@ typedef struct
     unsigned char buffer[64];
 } SHA1_CTX;
 
-void SHA1Transform(
+static void SHA1Transform(
     uint32_t state[5],
     const unsigned char buffer[64]
     );
 
-void SHA1Init(
+static void SHA1Init(
     SHA1_CTX * context
     );
 
-void SHA1Update(
+static void SHA1Update(
     SHA1_CTX * context,
     const unsigned char *data,
     uint32_t len
     );
 
-void SHA1Final(
+static void SHA1Final(
     unsigned char digest[20],
     SHA1_CTX * context
     );
@@ -215,7 +217,7 @@ void SHA1Final(
 
 /* Hash a single 512-bit block. This is the core of the algorithm. */
 
-void SHA1Transform(
+static void SHA1Transform(
     uint32_t state[5],
     const unsigned char buffer[64]
 )
@@ -359,7 +361,7 @@ void SHA1Init(
 
 /* Run your data through this. */
 
-void SHA1Update(
+static void SHA1Update(
     SHA1_CTX * context,
     const unsigned char *data,
     uint32_t len
@@ -392,7 +394,7 @@ void SHA1Update(
 
 /* Add padding and return the message digest. */
 
-void SHA1Final(
+static void SHA1Final(
     unsigned char digest[20],
     SHA1_CTX * context
 )
@@ -443,7 +445,7 @@ void SHA1Final(
     memset(&finalcount, '\0', sizeof(finalcount));
 }
 
-void SHA1(
+static void SHA1(
     uint8_t *hash_out,
     const uint8_t *str,
     uint32_t len)
@@ -498,7 +500,7 @@ static void base64_encode(char *restrict out, const uint8_t *restrict a, size_t 
   out[p] = '\0';
 }
 
-const char *net_tsinghua_login_sign(
+static const char *net_tsinghua_login_sign(
   const char *token,
   const char *username,
   const char *password,
@@ -569,33 +571,10 @@ const char *net_tsinghua_login_sign(
   return out_query;
 }
 
-const char *net_tsinghua_request(const char *url, const char *cookies)
-{
-  printf("[GET] %s\n", url);
-  if (cookies != NULL) printf("Cookie: %s\n", cookies);
-
-#if 1
-  // HTTP_PROXY= HTTPS_PROXY= curl `pbpaste` | tr -d '\r' | tr -d '\n' | pbcopy
-  static char s[2048];
-  gets(s);
-  return s;
-
-#else
-  if (strcmp(url, "http://3.3.3.3/") == 0) {
-    return "<html><head><script type=\"text/javascript\">location.href=\"http://auth4.tsinghua.edu.cn/index_35.html\"</script></head><body>Authentication is required. Click <a href=\"http://auth4.tsinghua.edu.cn/index_35.html\">here</a> to open the authentication page.</body></html>";
-  } else if (strcmp(url, "https://auth4.tsinghua.edu.cn/cgi-bin/get_challenge?callback=f&username=user&ip=&double_stack=1") == 0) {
-    return "Set-Cookie: thuwebcookie-47873=GCAEAGGFFAAA; Path=/; HttpOnly\n\nf({\"challenge\":\"316f5ecb6c05123c8e25d2a9745e9e16fa0f46760c5801c55a3759cc81f315fa\",\"client_ip\":\"183.173.63.70\",\"ecode\":0,\"error\":\"ok\",\"error_msg\":\"\",\"expire\":\"43\",\"online_ip\":\"183.173.63.70\",\"res\":\"ok\",\"srun_ver\":\"SRunCGIAuthIntfSvr V1.18 B20190423\",\"st\":1732449832})";
-  } else {
-    return "";
-  }
-#endif
-}
-
 int net_tsinghua_perform_login(const char *user, const char *pwd)
 {
-  // XXX: Is this necessary? Let's just fix `ac_id` (what is `ac_id`, after all?)
-if (0) {
-  const char *resp_1 = net_tsinghua_request("http://3.3.3.3/", NULL);
+  // XXX: Is this necessary? Maybe just fix `ac_id` at 35 (what is `ac_id`, after all?)
+  const char *resp_1 = net_tsinghua_request("http://info.tsinghua.edu.cn/", NULL);
   const char *ac_id_probe = "http://auth4.tsinghua.edu.cn/index_";
   const char *ac_id_start = strstr(resp_1, ac_id_probe);
   if (ac_id_start == NULL) return -1;
@@ -604,9 +583,6 @@ if (0) {
   int ac_id = 0;
   while (*ac_id_start >= '0' && *ac_id_start <= '9')
     ac_id = ac_id * 10 + (*(ac_id_start++) - '0');
-}
-
-  int ac_id = 35;
 
   char url_2[256];
   snprintf(url_2, sizeof url_2, "https://auth4.tsinghua.edu.cn/cgi-bin/get_challenge?callback=f&username=%s&ip=&double_stack=1", user);
@@ -634,30 +610,11 @@ if (0) {
     cookie[i] = cookie_start[i];
   cookie[i] = '\0';
 
-  printf("user: %s, ac_id: %d, token: %s, cookie: %s\n", user, ac_id, token, cookie);
+  // printf("user: %s, ac_id: %d, token: %s, cookie: %s\n", user, ac_id, token, cookie);
 
   const char *url_3 = net_tsinghua_login_sign(token, user, pwd, ac_id);
   const char *resp_3 = net_tsinghua_request(url_3, cookie);
   if (strstr(resp_3, "\"res\":\"ok\"") == NULL) return -4;
-
-  return 0;
-}
-
-#include <unistd.h> // getpass
-
-int main()
-{
-#if 0
-  const char *user = "user";
-  const char *pwd = "qwqwq";
-#else
-  char token[128], user[128], *pwd;
-  printf("user: "); scanf("%s", user);
-  pwd = getpass("pwd: ");
-  getchar();
-#endif
-  int result = net_tsinghua_perform_login(user, pwd);
-  printf("%d\n", result);
 
   return 0;
 }
