@@ -569,27 +569,33 @@ const char *net_tsinghua_login_sign(
   return out_query;
 }
 
-const char *net_tsinghua_request(const char *url)
+const char *net_tsinghua_request(const char *url, const char *cookies)
 {
   printf("[GET] %s\n", url);
+  if (cookies != NULL) printf("Cookie: %s\n", cookies);
 
+#if 1
   // HTTP_PROXY= HTTPS_PROXY= curl `pbpaste` | tr -d '\r' | tr -d '\n' | pbcopy
-  static char s[1024];
+  static char s[2048];
   gets(s);
   return s;
 
+#else
   if (strcmp(url, "http://3.3.3.3/") == 0) {
     return "<html><head><script type=\"text/javascript\">location.href=\"http://auth4.tsinghua.edu.cn/index_35.html\"</script></head><body>Authentication is required. Click <a href=\"http://auth4.tsinghua.edu.cn/index_35.html\">here</a> to open the authentication page.</body></html>";
   } else if (strcmp(url, "https://auth4.tsinghua.edu.cn/cgi-bin/get_challenge?callback=f&username=user&ip=&double_stack=1") == 0) {
-    return "f({\"challenge\":\"316f5ecb6c05123c8e25d2a9745e9e16fa0f46760c5801c55a3759cc81f315fa\",\"client_ip\":\"183.173.63.70\",\"ecode\":0,\"error\":\"ok\",\"error_msg\":\"\",\"expire\":\"43\",\"online_ip\":\"183.173.63.70\",\"res\":\"ok\",\"srun_ver\":\"SRunCGIAuthIntfSvr V1.18 B20190423\",\"st\":1732449832})";
+    return "Set-Cookie: thuwebcookie-47873=GCAEAGGFFAAA; Path=/; HttpOnly\n\nf({\"challenge\":\"316f5ecb6c05123c8e25d2a9745e9e16fa0f46760c5801c55a3759cc81f315fa\",\"client_ip\":\"183.173.63.70\",\"ecode\":0,\"error\":\"ok\",\"error_msg\":\"\",\"expire\":\"43\",\"online_ip\":\"183.173.63.70\",\"res\":\"ok\",\"srun_ver\":\"SRunCGIAuthIntfSvr V1.18 B20190423\",\"st\":1732449832})";
   } else {
     return "";
   }
+#endif
 }
 
 int net_tsinghua_perform_login(const char *user, const char *pwd)
 {
-  const char *resp_1 = net_tsinghua_request("http://3.3.3.3/");
+  // XXX: Is this necessary? Let's just fix `ac_id` (what is `ac_id`, after all?)
+if (0) {
+  const char *resp_1 = net_tsinghua_request("http://3.3.3.3/", NULL);
   const char *ac_id_probe = "http://auth4.tsinghua.edu.cn/index_";
   const char *ac_id_start = strstr(resp_1, ac_id_probe);
   if (ac_id_start == NULL) return -1;
@@ -598,10 +604,15 @@ int net_tsinghua_perform_login(const char *user, const char *pwd)
   int ac_id = 0;
   while (*ac_id_start >= '0' && *ac_id_start <= '9')
     ac_id = ac_id * 10 + (*(ac_id_start++) - '0');
+}
+
+  int ac_id = 35;
 
   char url_2[256];
   snprintf(url_2, sizeof url_2, "https://auth4.tsinghua.edu.cn/cgi-bin/get_challenge?callback=f&username=%s&ip=&double_stack=1", user);
-  const char *resp_2 = net_tsinghua_request(url_2);
+  const char *resp_2 = net_tsinghua_request(url_2, NULL);
+
+  // Token
   const char *token_probe = "\"challenge\":\"";
   const char *token_start = strstr(resp_2, token_probe);
   if (token_start == NULL) return -2;
@@ -611,11 +622,23 @@ int net_tsinghua_perform_login(const char *user, const char *pwd)
   memcpy(token, token_start, 64);
   token[64] = '\0';
 
-  printf("token: %s, ac_id: %d\n", token, ac_id);
+  // Cookie
+  const char *cookie_probe = "Set-Cookie: thuwebcookie-";
+  const char *cookie_start = strstr(resp_2, cookie_probe);
+  if (cookie_start == NULL) return -3;
+  cookie_start += strlen("Set-Cookie: ");
+
+  char cookie[65];
+  int i;
+  for (i = 0; i < 64 && cookie_start[i] != ';' && cookie_start[i] != '\0'; i++)
+    cookie[i] = cookie_start[i];
+  cookie[i] = '\0';
+
+  printf("user: %s, ac_id: %d, token: %s, cookie: %s\n", user, ac_id, token, cookie);
 
   const char *url_3 = net_tsinghua_login_sign(token, user, pwd, ac_id);
-  const char *resp_3 = net_tsinghua_request(url_3);
-  if (strstr(resp_3, "\"res\":\"ok\"") == NULL) return -3;
+  const char *resp_3 = net_tsinghua_request(url_3, cookie);
+  if (strstr(resp_3, "\"res\":\"ok\"") == NULL) return -4;
 
   return 0;
 }
@@ -624,7 +647,7 @@ int net_tsinghua_perform_login(const char *user, const char *pwd)
 
 int main()
 {
-#if 1
+#if 0
   const char *user = "user";
   const char *pwd = "qwqwq";
 #else
