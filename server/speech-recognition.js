@@ -23,7 +23,7 @@ const { createHmac } = await import('node:crypto')
 // Output: Base64 encoded
 const base64_HMAC_SHA256 = (v, k) => createHmac('sha256', k).update(v).digest('base64')
 
-const speechRecognition = () => new Promise((resolve, reject) => {
+export const speechRecognition = () => new Promise((resolve, reject) => {
   const host = 'iat-api.xfyun.cn'
   const date = rfc1123(new Date())
   const requestLine = `GET /v2/iat HTTP/1.1`
@@ -38,7 +38,12 @@ const speechRecognition = () => new Promise((resolve, reject) => {
     `&date=${encodeURIComponent(date)}&host=${host}`
 
   let ret
-  let promiseFinished = false
+  let promiseFinished = false   // For the current call (creation)
+
+  let recognitionResult = []
+
+  let endPromiseResolve = null  // For the `end()` call
+  let endPromiseTimer = null
 
   const ws = new WebSocket(url)
   ws.onopen = (ev) => {
@@ -58,11 +63,30 @@ const speechRecognition = () => new Promise((resolve, reject) => {
     ws.close()
   }
   ws.onmessage = (ev) => {
-    console.log('data', Deno.inspect(ev.data))
+    try {
+      const o = JSON.parse(ev.data)
+      // console.log('data', Deno.inspect(o, { depth: 99 }))
+      const sentence =
+        o.data.result.ws.map((wsEntry) =>
+          wsEntry.cw.map((cwEntry) => cwEntry.w).join('')).join('')
+      recognitionResult.push(sentence)
+      if (o.data.status === 2) {
+        if (endPromiseResolve) {
+          clearTimeout(endPromiseTimer)
+          endPromiseResolve(recognitionResult.join(''))
+        }
+        ws.close()
+      }
+    } catch (e) {
+      console.log(e.message)
+      return
+    }
   }
 
   let first = true
   const sendAudio = (pcm, last) => {
+    if (pcm.length === 0 && !last) { return }
+    console.log('send audio', pcm.length, !!last, Date.now())
     const o = {
       data: {
         status: 1,
@@ -102,18 +126,28 @@ const speechRecognition = () => new Promise((resolve, reject) => {
       // residue[:] = buf[sendLen:]
       buf.copy(residue, 0, sendLen)
       sendAudio(buf.slice(0, sendLen))
+      lastSend = new Date()
     }
   }
 
   const end = () => new Promise((resolve, reject) => {
+    endPromiseResolve = resolve
+    endPromiseTimer = setTimeout(() => {
+      if (endPromiseTimer !== null) {
+        endPromiseResolve = null
+        ws.close()
+        reject(new Error('Server did not return valid recognition results in time'))
+      }
+    }, 5000)
     if (new Date() - lastSend < 40) {
       setTimeout(() => {
-        sendAudio(residue, true)
-        resolve()
+        // Workaround: server may not respond timely if sent a large chunk marked finish?
+        sendAudio(residue, false)
+        sendAudio(Buffer.alloc(0), true)
       }, Math.max(10, 40 - (new Date() - lastSend)))
     } else {
-      sendAudio(residue, true)
-      resolve()
+      sendAudio(residue, false)
+      sendAudio(Buffer.alloc(0), true)
     }
   })
 
@@ -123,12 +157,13 @@ const speechRecognition = () => new Promise((resolve, reject) => {
   }
 })
 
+if (0) {
 // ffmpeg -i 6-聆小璐-助理.wav -t 4 -ar 16000 -f s16le -acodec pcm_s16le 聆小璐.pcm
 
 const r = await speechRecognition()
 const fileContent = await Deno.readFile('聆小璐.pcm')
 r.push(fileContent)
-await r.end()
-// 2.5s  {"code":0,"message":"success","sid":"iat000e6558@gz193627886140b17802","data":{"status":2,"result":{"ed":0,"ws":[{"bg":1,"cw":[{"sc":0,"w":"欢迎"}]},{"bg":41,"cw":[{"sc":0,"w":"来到"}]},{"bg":73,"cw":[{"sc":0,"w":"科大讯飞"}]},{"bg":161,"cw":[{"sc":0,"w":"全球"}]},{"bg":213,"cw":[{"sc":0,"w":"10"}]},{"bg":240,"cw":[{"sc":0,"w":"。"}]}],"sn":1,"ls":true,"bg":0}}}
-// 3.75s {"code":0,"message":"success","sid":"iat000db7da@dx193627b8f38b9ed802","data":{"result":{"bg":0,"ed":0,"ws":[{"bg":1,"cw":[{"sc":0,"w":"欢迎"}]},{"bg":41,"cw":[{"sc":0,"w":"来到"}]},{"bg":73,"cw":[{"sc":0,"w":"科大讯飞"}]},{"bg":161,"cw":[{"sc":0,"w":"全球"}]},{"bg":213,"cw":[{"sc":0,"w":"1024"}]},{"cw":[{"w":"开发者","sc":0}],"bg":277},{"bg":340,"cw":[{"sc":0,"w":"。"}]}],"sn":1,"ls":true},"status":2}}
-// 4s    {"code":0,"message":"success","sid":"iat000e3339@dx193627d5d73a182802","data":{"result":{"sn":1,"ls":true,"bg":0,"ed":0,"ws":[{"bg":1,"cw":[{"w":"欢迎","sc":0}]},{"bg":41,"cw":[{"sc":0,"w":"来到"}]},{"bg":73,"cw":[{"sc":0,"w":"科大讯飞"}]},{"bg":161,"cw":[{"w":"全球","sc":0}]},{"bg":213,"cw":[{"sc":0,"w":"1024"}]},{"bg":277,"cw":[{"sc":0,"w":"开发者"}]},{"bg":341,"cw":[{"sc":0,"w":"节"}]},{"bg":356,"cw":[{"sc":0,"w":"。"}]}]},"status":2}}
+const s = await r.end()
+console.log(s)
+
+}

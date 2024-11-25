@@ -116,6 +116,8 @@ void http_get_task(void *_unused)
     .user_data = local_response_buffer,
   });
 
+  esp_http_client_set_timeout_ms(client, 30000);
+
   while (1) {
     ESP_LOGI(TAG, "HTTP GET sending");
 
