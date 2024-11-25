@@ -29,7 +29,7 @@ void app_main(void)
   // Wi-Fi
 if (0) {
   wifi_init_sta();
-  xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, NULL);
+  xTaskCreate(&http_test_task, "http_get_task", 4096, NULL, 5, NULL);
 }
 
   // I2S input
@@ -38,9 +38,21 @@ if (0) {
   // Audio processing
   audio_init();
 
+  int state = 0;
   while (1) {
-    // printf("Tick\n");
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    if (state == 0 && audio_wake_state() != 0) {
+      printf("Wake-up word detected\n");
+      state = 1;
+    }
+    if (state == 1) {
+      int n = audio_speech_buffer_size();
+      printf("Speech buffer size %d\n", n);
+      if (n >= 16000 * 5) {
+        state = 0;
+        audio_clear_wake_state();
+      }
+    }
   }
 
   esp_restart();

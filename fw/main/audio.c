@@ -2,6 +2,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "esp_log.h"
+#include <string.h>
 
 #include "model_path.h"
 #include "esp_wn_iface.h"
@@ -13,6 +14,8 @@
 #include "esp_nsn_models.h"
 #include "esp_nsn_iface.h"
 #endif
+
+#define min(_a, _b) ((_a) < (_b) ? (_a) : (_b))
 
 static const char *TAG = "Audio";
 
@@ -48,8 +51,18 @@ void audio_init()
   xTaskCreate(audio_task, "audio_task", 16384, NULL, 5, NULL);
 }
 
+// TODO: Lock
+
+static int wake_state = 0;
+
+static int16_t *speech_buffer;
+#define SPEECH_BUFFER_SIZE (16000 * 5)
+static int speech_buffer_ptr = 0;
+
 void audio_task(void *_unused)
 {
+  speech_buffer = heap_caps_malloc(sizeof(int16_t) * SPEECH_BUFFER_SIZE, MALLOC_CAP_SPIRAM);
+
   const esp_afe_sr_iface_t *afe_handle = &ESP_AFE_SR_HANDLE;
 
   int feed_chunksize = afe_handle->get_feed_chunksize(afe_data);
@@ -79,11 +92,38 @@ void audio_task(void *_unused)
       afe_fetch_result_t *fetch_result = afe_handle->fetch(afe_data);
       static int n = 0;
       if ((n = (n + 1) % 16) == 15)
-        ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f, wakeup_state = %d", fetch_result->data_size, fetch_result->data_volume, (int)fetch_result->wakeup_state);
-      if (fetch_result->wakeup_state == WAKENET_DETECTED)
-        ESP_LOGI(TAG, "Wake up word detected");
+        ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f", fetch_result->data_size, fetch_result->data_volume);
+      if (fetch_result->wakeup_state == WAKENET_DETECTED) {
+        wake_state = 1;
+      }
       assert(fetch_result->data_size == fetch_chunksize * sizeof(int16_t));
       feed_count -= fetch_chunksize;
+
+      if (wake_state != 0) {
+        // Save to buffer
+        int copy_count = min(
+          SPEECH_BUFFER_SIZE - speech_buffer_ptr,
+          fetch_result->data_size / sizeof(int16_t)
+        );
+        memcpy(speech_buffer + speech_buffer_ptr, fetch_result->data, copy_count * sizeof(int16_t));
+        speech_buffer_ptr += copy_count;
+      }
     }
   }
+}
+
+int audio_wake_state()
+{
+  return wake_state;
+}
+
+void audio_clear_wake_state()
+{
+  wake_state = 0;
+  speech_buffer_ptr = 0;
+}
+
+int audio_speech_buffer_size()
+{
+  return speech_buffer_ptr;
 }

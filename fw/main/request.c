@@ -102,7 +102,7 @@ const char *simple_request(const char *url, const char *cookies)
   return local_response_buffer;
 }
 
-void http_get_task(void *_unused)
+void http_test_task(void *_unused)
 {
   static char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER];
 
