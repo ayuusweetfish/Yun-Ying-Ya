@@ -1,5 +1,9 @@
+const APP_ID = Deno.env.get('APP_ID') || prompt('App ID:')
 const API_KEY = Deno.env.get('API_KEY') || prompt('API key:')
 const API_SECRET = Deno.env.get('API_SECRET') || prompt('API secret:')
+
+import { encodeBase64 } from 'jsr:@std/encoding/base64'
+import { Buffer } from 'node:buffer'
 
 const rfc1123 = (d) => d.toLocaleString('en-GB', {
   timeZone: 'UTC',
@@ -19,7 +23,7 @@ const { createHmac } = await import('node:crypto')
 // Output: Base64 encoded
 const base64_HMAC_SHA256 = (v, k) => createHmac('sha256', k).update(v).digest('base64')
 
-const speechRecognition = async () => {
+const speechRecognition = () => new Promise((resolve, reject) => {
   const host = 'iat-api.xfyun.cn'
   const date = rfc1123(new Date())
   const requestLine = `GET /v2/iat HTTP/1.1`
@@ -33,19 +37,98 @@ const speechRecognition = async () => {
     `wss://iat-api.xfyun.cn/v2/iat?authorization=${encodeURIComponent(auth)}` +
     `&date=${encodeURIComponent(date)}&host=${host}`
 
+  let ret
+  let promiseFinished = false
+
   const ws = new WebSocket(url)
   ws.onopen = (ev) => {
     console.log('open')
+    resolve(ret)
+    promiseFinished = true
   }
   ws.onclose = (ev) => {
     console.log('close')
   }
   ws.onerror = (ev) => {
     console.log('error', ev.message)
+    if (!promiseFinished) {
+      reject(ev.message)
+      promiseFinished = true
+    }
+    ws.close()
   }
   ws.onmessage = (ev) => {
-    console.log(data, Deno.inspect(ev.data))
+    console.log('data', Deno.inspect(ev.data))
   }
-}
 
-await speechRecognition()
+  let first = true
+  const sendAudio = (pcm, last) => {
+    const o = {
+      data: {
+        status: 1,
+        format: 'audio/L16;rate=16000',
+        encoding: 'raw',
+        audio: encodeBase64(pcm),
+      }
+    }
+    if (first) {
+      first = false
+      Object.assign(o, {
+        common: { app_id: APP_ID },
+        business: {
+          language: 'zh_cn',
+          domain: 'iat',
+          accent: 'mandarin',
+        },
+      })
+      o.data.status = 0
+    }
+    if (last) {
+      o.data.status = 2
+    }
+    ws.send(JSON.stringify(o))
+  }
+
+  const FRAME = 1280
+  let residue = Buffer.alloc(0)
+  let lastSend = new Date(0)
+  const push = (pcm) => {
+    const buf = Buffer.concat([residue, pcm])
+    if (new Date() - lastSend < 40) {
+      residue = buf
+    } else {
+      const sendLen = buf.length - buf.length % FRAME
+      residue = Buffer.alloc(buf.length % FRAME)
+      // residue[:] = buf[sendLen:]
+      buf.copy(residue, 0, sendLen)
+      sendAudio(buf.slice(0, sendLen))
+    }
+  }
+
+  const end = () => new Promise((resolve, reject) => {
+    if (new Date() - lastSend < 40) {
+      setTimeout(() => {
+        sendAudio(residue, true)
+        resolve()
+      }, Math.max(10, 40 - (new Date() - lastSend)))
+    } else {
+      sendAudio(residue, true)
+      resolve()
+    }
+  })
+
+  ret = {
+    push,
+    end,
+  }
+})
+
+// ffmpeg -i 6-聆小璐-助理.wav -t 4 -ar 16000 -f s16le -acodec pcm_s16le 聆小璐.pcm
+
+const r = await speechRecognition()
+const fileContent = await Deno.readFile('聆小璐.pcm')
+r.push(fileContent)
+await r.end()
+// 2.5s  {"code":0,"message":"success","sid":"iat000e6558@gz193627886140b17802","data":{"status":2,"result":{"ed":0,"ws":[{"bg":1,"cw":[{"sc":0,"w":"欢迎"}]},{"bg":41,"cw":[{"sc":0,"w":"来到"}]},{"bg":73,"cw":[{"sc":0,"w":"科大讯飞"}]},{"bg":161,"cw":[{"sc":0,"w":"全球"}]},{"bg":213,"cw":[{"sc":0,"w":"10"}]},{"bg":240,"cw":[{"sc":0,"w":"。"}]}],"sn":1,"ls":true,"bg":0}}}
+// 3.75s {"code":0,"message":"success","sid":"iat000db7da@dx193627b8f38b9ed802","data":{"result":{"bg":0,"ed":0,"ws":[{"bg":1,"cw":[{"sc":0,"w":"欢迎"}]},{"bg":41,"cw":[{"sc":0,"w":"来到"}]},{"bg":73,"cw":[{"sc":0,"w":"科大讯飞"}]},{"bg":161,"cw":[{"sc":0,"w":"全球"}]},{"bg":213,"cw":[{"sc":0,"w":"1024"}]},{"cw":[{"w":"开发者","sc":0}],"bg":277},{"bg":340,"cw":[{"sc":0,"w":"。"}]}],"sn":1,"ls":true},"status":2}}
+// 4s    {"code":0,"message":"success","sid":"iat000e3339@dx193627d5d73a182802","data":{"result":{"sn":1,"ls":true,"bg":0,"ed":0,"ws":[{"bg":1,"cw":[{"w":"欢迎","sc":0}]},{"bg":41,"cw":[{"sc":0,"w":"来到"}]},{"bg":73,"cw":[{"sc":0,"w":"科大讯飞"}]},{"bg":161,"cw":[{"w":"全球","sc":0}]},{"bg":213,"cw":[{"sc":0,"w":"1024"}]},{"bg":277,"cw":[{"sc":0,"w":"开发者"}]},{"bg":341,"cw":[{"sc":0,"w":"节"}]},{"bg":356,"cw":[{"sc":0,"w":"。"}]}]},"status":2}}
