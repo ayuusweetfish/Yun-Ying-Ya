@@ -12,7 +12,41 @@
 
 #define TAG "main"
 
+static void print_chip_info();
+
 void app_main(void)
+{
+  print_chip_info();
+
+  // NVS
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    ret = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(ret);
+
+  // Wi-Fi
+if (0) {
+  wifi_init_sta();
+  xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, NULL);
+}
+
+  // I2S input
+  i2s_init();
+
+  // Audio processing
+  audio_init();
+
+  while (1) {
+    // printf("Tick\n");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+
+  esp_restart();
+}
+
+void print_chip_info()
 {
   printf("Hello world!\n");
 
@@ -40,47 +74,4 @@ void app_main(void)
          (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
   printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
-
-  uint8_t *psram_buf = heap_caps_malloc(1048576, MALLOC_CAP_SPIRAM);
-  psram_buf[1000000] = 0xAA;
-  printf("PSRAM buffer %p\n", psram_buf);
-  ESP_LOG_BUFFER_HEX("main", psram_buf + 999980, 100);
-
-  i2s_init();
-
-  // Initialize NVS
-  esp_err_t ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    ret = nvs_flash_init();
-  }
-  ESP_ERROR_CHECK(ret);
-
-if (0) {
-  ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
-  wifi_init_sta();
-
-/*
-  Hello world!
-  This is esp32s3 chip with 2 CPU core(s), WiFi/BLE, silicon revision v0.2, 8MB external flash
-  Minimum free heap size: 389836 bytes
-*/
-
-  xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, NULL);
-}
-
-  audio_init();
-
-  while (1) {
-    // printf("Tick\n");
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  }
-
-  for (int i = 10; i >= 0; i--) {
-    printf("Restarting in %d seconds...\n", i);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  }
-  printf("Restarting now.\n");
-  fflush(stdout);
-  esp_restart();
 }

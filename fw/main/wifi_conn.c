@@ -8,10 +8,13 @@
 #include "esp_timer.h"
 #include <string.h>
 
-#include "wifi_cred.h"
-// EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS or
-// EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_AUTH_USER, EXAMPLE_ESP_WIFI_AUTH_PASS
-// EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_EAP_USER, EXAMPLE_ESP_WIFI_EAP_PASS
+#if __has_include("wifi_cred.h")
+  #include "wifi_cred.h"
+  // EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS or
+  // EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_AUTH_USER, EXAMPLE_ESP_WIFI_AUTH_PASS
+  // EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_EAP_USER, EXAMPLE_ESP_WIFI_EAP_PASS
+#endif
+
 #if defined(EXAMPLE_ESP_WIFI_EAP_USER) && defined(EXAMPLE_ESP_WIFI_EAP_PASS)
   #define PEAP 1
   #ifndef EXAMPLE_ESP_WIFI_EAP_ANON
@@ -28,8 +31,11 @@
 #endif
 
 #if !defined(EXAMPLE_ESP_WIFI_SSID) || (!defined(EXAMPLE_ESP_WIFI_PASS) && !PEAP && !HTTP_AUTH)
-  #error "Define EXAMPLE_ESP_WIFI_SSID and EXAMPLE_ESP_WIFI_PASS in wifi_cred.h"
-#endif
+  #warning "Wi-Fi is currently no-op."
+  #warning "To enable, define credentials in wifi_cred.h (refer to wifi_cred.example.h)"
+  void wifi_init_sta(void) { }
+
+#else   // Actual implementation, to file end
 
 #define EXAMPLE_ESP_MAXIMUM_RETRY  5
 
@@ -85,6 +91,16 @@ extern uint8_t ca_pem_end[]   asm("_binary_ca_pem_end");
 
 void wifi_init_sta(void)
 {
+  ESP_LOGI(TAG, "Connecting to Wi-Fi \"" EXAMPLE_ESP_WIFI_SSID "\" with authentication "
+#if PEAP
+    "PEAP"
+#elif HTTP_AUTH
+    "HTTP-based"
+#else
+    "WPA2"
+#endif
+  );
+
   s_wifi_event_group = xEventGroupCreate();
 
   ESP_ERROR_CHECK(esp_netif_init());
@@ -192,3 +208,5 @@ const char *net_tsinghua_request(const char *url, const char *cookies)
   return simple_request(url, cookies);
 }
 #endif
+
+#endif  // Actual implementation, from #else
