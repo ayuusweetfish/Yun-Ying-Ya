@@ -102,6 +102,95 @@ const char *simple_request(const char *url, const char *cookies)
   return local_response_buffer;
 }
 
+typedef struct post_handle_t {
+  esp_http_client_handle_t client;
+  uint8_t *resp_buffer;
+  size_t resp_ptr;
+} post_handle_t;
+
+static esp_err_t post_event_handler(esp_http_client_event_t *evt)
+{
+  struct post_handle_t *p = (struct post_handle_t *)evt->user_data;
+  switch (evt->event_id) {
+    case HTTP_EVENT_ERROR:
+      ESP_LOGD(TAG, "POST HTTP_EVENT_ERROR");
+      break;
+    case HTTP_EVENT_ON_CONNECTED:
+      ESP_LOGI(TAG, "POST HTTP_EVENT_ON_CONNECTED");
+      p->resp_ptr = 0;
+      break;
+    case HTTP_EVENT_HEADER_SENT:
+      ESP_LOGI(TAG, "POST HTTP_EVENT_HEADER_SENT");
+      break;
+    case HTTP_EVENT_ON_HEADER:
+      ESP_LOGI(TAG, "POST HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
+      break;
+    case HTTP_EVENT_ON_DATA:
+      ESP_LOGI(TAG, "POST HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+      if (!esp_http_client_is_chunked_response(evt->client)) {
+        int copy_len = min(evt->data_len, 32768 - p->resp_ptr);
+        memcpy(p->resp_buffer + p->resp_ptr, evt->data, copy_len);
+        p->resp_ptr += copy_len;
+      }
+      break;
+    case HTTP_EVENT_ON_FINISH:
+      ESP_LOGI(TAG, "POST HTTP_EVENT_ON_FINISH");
+      break;
+    case HTTP_EVENT_DISCONNECTED:
+      ESP_LOGI(TAG, "POST HTTP_EVENT_DISCONNECTED");
+      int mbedtls_err = 0;
+      esp_err_t err = esp_tls_get_and_clear_last_error((esp_tls_error_handle_t)evt->data, &mbedtls_err, NULL);
+      if (err != 0) {
+        ESP_LOGI(TAG, "Last esp error code: 0x%x", err);
+        ESP_LOGI(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
+      }
+      break;
+    case HTTP_EVENT_REDIRECT:
+      break;
+  }
+  return ESP_OK;
+}
+
+// XXX: Untested
+
+post_handle_t *post_create()
+{
+  struct post_handle_t *p = malloc(sizeof(struct post_handle_t));
+
+  p->resp_buffer = heap_caps_malloc(32768, MALLOC_CAP_SPIRAM);
+  p->resp_ptr = 0;
+
+  p->client = esp_http_client_init(&(esp_http_client_config_t){
+    .url = "https://play.ayu.land/ya",
+    .auth_type = HTTP_AUTH_TYPE_NONE,
+    .transport_type = HTTP_TRANSPORT_OVER_SSL,
+    .crt_bundle_attach = esp_crt_bundle_attach,
+    .event_handler = post_event_handler,
+    .method = HTTP_METHOD_POST,
+    .timeout_ms = 30000,
+    .user_data = p,
+  });
+
+  return p;
+}
+
+void post_open(const post_handle_t *p)
+{
+  // Chunked encoding
+  // Ref: esp-idf/components/esp_http_client/esp_http_client.c, `http_client_prepare_first_line()`
+  esp_http_client_open(p->client, -1);
+}
+
+void post_write(const post_handle_t *p, void *data, size_t len)
+{
+  esp_http_client_write(p->client, data, len);
+}
+
+void post_finish(const post_handle_t *p)
+{
+  esp_http_client_close(p->client);
+}
+
 void http_test_task(void *_unused)
 {
   static char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER];

@@ -1,6 +1,7 @@
 #include "main.h"
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "esp_log.h"
 #include <string.h>
 
@@ -51,9 +52,9 @@ void audio_init()
   xTaskCreate(audio_task, "audio_task", 16384, NULL, 5, NULL);
 }
 
-// TODO: Lock
-
 static int wake_state = 0;
+
+SemaphoreHandle_t *buffer_mutex;
 
 static int16_t *speech_buffer;
 #define SPEECH_BUFFER_SIZE (16000 * 5)
@@ -61,7 +62,11 @@ static int speech_buffer_ptr = 0;
 
 void audio_task(void *_unused)
 {
+  buffer_mutex = xSemaphoreCreateMutex();
+  assert(buffer_mutex != NULL);
+
   speech_buffer = heap_caps_malloc(sizeof(int16_t) * SPEECH_BUFFER_SIZE, MALLOC_CAP_SPIRAM);
+  assert(speech_buffer != NULL);
 
   const esp_afe_sr_iface_t *afe_handle = &ESP_AFE_SR_HANDLE;
 
@@ -119,11 +124,21 @@ int audio_wake_state()
 
 void audio_clear_wake_state()
 {
+  xSemaphoreTake(buffer_mutex, portMAX_DELAY);
   wake_state = 0;
   speech_buffer_ptr = 0;
+  xSemaphoreGive(buffer_mutex);
+}
+
+const int16_t *audio_speech_buffer()
+{
+  return speech_buffer;
 }
 
 int audio_speech_buffer_size()
 {
-  return speech_buffer_ptr;
+  xSemaphoreTake(buffer_mutex, portMAX_DELAY);
+  int ret = speech_buffer_ptr;
+  xSemaphoreGive(buffer_mutex);
+  return ret;
 }
