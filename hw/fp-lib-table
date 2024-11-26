@@ -3,4 +3,5 @@
   (lib (name "Espressif")(type "KiCad")(uri "${KIPRJMOD}/libs/Espressif/Espressif.pretty")(options "")(descr ""))
   (lib (name "INMP441")(type "KiCad")(uri "${KIPRJMOD}/libs/INMP441/INMP441.pretty")(options "")(descr ""))
   (lib (name "Duck_footprints")(type "KiCad")(uri "${KIPRJMOD}/Duck_footprints.pretty")(options "")(descr ""))
+  (lib (name "MAX17048G+T10")(type "KiCad")(uri "${KIPRJMOD}/libs/MAX17048G+T10/MAX17048G+T10.pretty")(options "")(descr ""))
 )

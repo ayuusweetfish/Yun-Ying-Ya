@@ -2,4 +2,6 @@
   (version 7)
   (lib (name "Espressif")(type "KiCad")(uri "${KIPRJMOD}/libs/Espressif/Espressif.kicad_sym")(options "")(descr ""))
   (lib (name "INMP441")(type "KiCad")(uri "${KIPRJMOD}/libs/INMP441/INMP441.kicad_sym")(options "")(descr ""))
+  (lib (name "MAX17048G+T10")(type "KiCad")(uri "${KIPRJMOD}/libs/MAX17048G+T10/MAX17048G+T10.kicad_sym")(options "")(descr ""))
+  (lib (name "CH343")(type "KiCad")(uri "${KIPRJMOD}/libs/CH343/CH343.kicad_sym")(options "")(descr ""))
 )
