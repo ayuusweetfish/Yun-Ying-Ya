@@ -24,5 +24,5 @@ const serveReq = async (req) => {
 const serverPort = +Deno.env.get('SERVEPORT') || 24118
 const server = Deno.serve({ port: serverPort }, serveReq)
 
-// curl -X POST http://127.0.0.1:24118 --data-binary '@聆小璐.pcm' --limit-rate 50k
-// Also try: limit 1k, no limit
+// curl http://127.0.0.1:24118 -H 'Transfer-Encoding: chunked' --data-binary '@聆小璐.pcm' --limit-rate 50k
+// Also try: limit 10k, 1k, no limit
