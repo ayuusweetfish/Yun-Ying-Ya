@@ -107,61 +107,11 @@ const char *simple_request(const char *url, const char *cookies)
 
 typedef struct post_handle_t {
   esp_http_client_handle_t client;
-  uint8_t *resp_buffer;
-  size_t resp_ptr;
 } post_handle_t;
-
-static esp_err_t post_event_handler(esp_http_client_event_t *evt)
-{
-  struct post_handle_t *p = (struct post_handle_t *)evt->user_data;
-  switch (evt->event_id) {
-    case HTTP_EVENT_ERROR:
-      ESP_LOGD(TAG, "POST HTTP_EVENT_ERROR");
-      break;
-    case HTTP_EVENT_ON_CONNECTED:
-      ESP_LOGD(TAG, "POST HTTP_EVENT_ON_CONNECTED");
-      p->resp_ptr = 0;
-      break;
-    case HTTP_EVENT_HEADER_SENT:
-      ESP_LOGD(TAG, "POST HTTP_EVENT_HEADER_SENT");
-      break;
-    case HTTP_EVENT_ON_HEADER:
-      ESP_LOGD(TAG, "POST HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
-      break;
-    case HTTP_EVENT_ON_DATA:
-      ESP_LOGD(TAG, "POST HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
-      if (!esp_http_client_is_chunked_response(evt->client)) {
-        int copy_len = min(evt->data_len, 32768 - p->resp_ptr);
-        memcpy(p->resp_buffer + p->resp_ptr, evt->data, copy_len);
-        p->resp_ptr += copy_len;
-      }
-      break;
-    case HTTP_EVENT_ON_FINISH:
-      ESP_LOGD(TAG, "POST HTTP_EVENT_ON_FINISH");
-      break;
-    case HTTP_EVENT_DISCONNECTED:
-      ESP_LOGD(TAG, "POST HTTP_EVENT_DISCONNECTED");
-      int mbedtls_err = 0;
-      esp_err_t err = esp_tls_get_and_clear_last_error((esp_tls_error_handle_t)evt->data, &mbedtls_err, NULL);
-      if (err != 0) {
-        ESP_LOGI(TAG, "Last esp error code: 0x%x", err);
-        ESP_LOGI(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
-      }
-      break;
-    case HTTP_EVENT_REDIRECT:
-      break;
-  }
-  return ESP_OK;
-}
-
-// XXX: Untested
 
 post_handle_t *post_create()
 {
   struct post_handle_t *p = malloc(sizeof(struct post_handle_t));
-
-  p->resp_buffer = heap_caps_malloc(32768, MALLOC_CAP_SPIRAM);
-  p->resp_ptr = 0;
 
   p->client = esp_http_client_init(&(esp_http_client_config_t){
     // .url = "https://play.ayu.land/ya",
@@ -170,7 +120,6 @@ post_handle_t *post_create()
     // .transport_type = HTTP_TRANSPORT_OVER_SSL,
     .transport_type = HTTP_TRANSPORT_OVER_TCP,
     .crt_bundle_attach = esp_crt_bundle_attach,
-    .event_handler = post_event_handler,
     .method = HTTP_METHOD_POST,
     .timeout_ms = 30000,
     .user_data = p,
@@ -188,24 +137,28 @@ void post_open(const post_handle_t *p)
 
 void post_write(const post_handle_t *p, const void *data, size_t len)
 {
-  ESP_LOGI(TAG, "writing request payload, %zu bytes", len);
+  ESP_LOGD(TAG, "writing request payload, %zu bytes", len);
   char s[16];
   int s_len = snprintf(s, sizeof s, "%zx\r\n", len);
   esp_http_client_write(p->client, s, s_len);
   esp_http_client_write(p->client, data, len);
   s[0] = '\r'; s[1] = '\n';
   esp_http_client_write(p->client, s, 2);
-  ESP_LOGI(TAG, "written!");
 }
 
-void post_finish(const post_handle_t *p)
+const char *post_finish(const post_handle_t *p)
 {
   esp_http_client_write(p->client, "0\r\n\r\n", 5);
-  int n;
-  esp_http_client_flush_response(p->client, &n);
-  ESP_LOGI(TAG, "flushed response, %d bytes (resp_ptr %zu)", n, p->resp_ptr);
+  static char buf[1024];
+  int content_len = esp_http_client_fetch_headers(p->client);
+  int read_len = esp_http_client_read(p->client, buf, (sizeof buf) - 1);
   esp_http_client_close(p->client);
-  ESP_LOG_BUFFER_HEX(TAG, p->resp_buffer, p->resp_ptr);
+  if (content_len == -1 || read_len < content_len) {
+    ESP_LOGW(TAG, "did not receive complete response (content-length %d, read %d)", content_len, read_len);
+    return NULL;
+  }
+  buf[read_len] = '\0';
+  return buf;
 }
 
 void http_test_task(void *_unused)

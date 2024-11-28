@@ -6,7 +6,6 @@ const serveReq = async (req) => {
     console.log('connected!')
     const sr = await speechRecognition()
     const reader = req.body.getReader()
-    let toalLen = 0
     while (true) {
       try {
         const result = await reader.read()
@@ -14,7 +13,7 @@ const serveReq = async (req) => {
 
         sr.push(result.value)
       } catch (e) {
-        console.log(e)
+        console.log(`Error reading response: ${e.message}`)
         break
       }
     }
