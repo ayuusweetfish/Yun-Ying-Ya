@@ -38,18 +38,23 @@ if (1) {
   // Audio processing
   audio_init();
 
+  post_handle_t *p = post_create();
+
   int state = 0;
   while (1) {
     vTaskDelay(100 / portTICK_PERIOD_MS);
     if (state == 0 && audio_wake_state() != 0) {
       printf("Wake-up word detected\n");
       state = 1;
+      post_open(p);
     }
     if (state == 1) {
       int n = audio_speech_buffer_size();
       printf("Speech buffer size %d\n", n);
       if (n >= 16000 * 5) {
         state = 0;
+        post_write(p, audio_speech_buffer(), n * sizeof(int16_t));
+        post_finish(p);
         audio_clear_wake_state();
       }
     }

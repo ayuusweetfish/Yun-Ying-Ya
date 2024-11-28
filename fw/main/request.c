@@ -101,7 +101,7 @@ const char *simple_request(const char *url, const char *cookies)
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 
-  if (err != ESP_OK) return "";
+  if (err != ESP_OK) return "\x7f(error)";
   return local_response_buffer;
 }
 
@@ -164,9 +164,11 @@ post_handle_t *post_create()
   p->resp_ptr = 0;
 
   p->client = esp_http_client_init(&(esp_http_client_config_t){
-    .url = "https://play.ayu.land/ya",
+    // .url = "https://play.ayu.land/ya",
+    .url = "http://45.63.5.138:24118/",
     .auth_type = HTTP_AUTH_TYPE_NONE,
-    .transport_type = HTTP_TRANSPORT_OVER_SSL,
+    // .transport_type = HTTP_TRANSPORT_OVER_SSL,
+    .transport_type = HTTP_TRANSPORT_OVER_TCP,
     .crt_bundle_attach = esp_crt_bundle_attach,
     .event_handler = post_event_handler,
     .method = HTTP_METHOD_POST,
@@ -184,14 +186,26 @@ void post_open(const post_handle_t *p)
   esp_http_client_open(p->client, -1);
 }
 
-void post_write(const post_handle_t *p, void *data, size_t len)
+void post_write(const post_handle_t *p, const void *data, size_t len)
 {
+  ESP_LOGI(TAG, "writing request payload, %zu bytes", len);
+  char s[16];
+  int s_len = snprintf(s, sizeof s, "%zx\r\n", len);
+  esp_http_client_write(p->client, s, s_len);
   esp_http_client_write(p->client, data, len);
+  s[0] = '\r'; s[1] = '\n';
+  esp_http_client_write(p->client, s, 2);
+  ESP_LOGI(TAG, "written!");
 }
 
 void post_finish(const post_handle_t *p)
 {
+  esp_http_client_write(p->client, "0\r\n\r\n", 5);
+  int n;
+  esp_http_client_flush_response(p->client, &n);
+  ESP_LOGI(TAG, "flushed response, %d bytes (resp_ptr %zu)", n, p->resp_ptr);
   esp_http_client_close(p->client);
+  ESP_LOG_BUFFER_HEX(TAG, p->resp_buffer, p->resp_ptr);
 }
 
 void http_test_task(void *_unused)
@@ -206,18 +220,15 @@ void http_test_task(void *_unused)
     .crt_bundle_attach = esp_crt_bundle_attach,
     .event_handler = simple_http_event_handler,
     .method = HTTP_METHOD_GET,
+    .timeout_ms = 30000,
     .user_data = local_response_buffer,
   });
 
-  esp_http_client_set_timeout_ms(client, 30000);
+  for (int i = 0; i <= 1; i++) {
+    const char *url = (i == 0 ? "https://www.howsmyssl.com/a/check" : "http://ayu.land");
+    ESP_LOGI(TAG, "HTTP GET sending %s", url);
 
-  while (1) {
-    ESP_LOGI(TAG, "HTTP GET sending");
-
-    static bool parity = 0;
-    esp_http_client_set_url(client,
-      (parity ^= 1) ? "https://www.howsmyssl.com/a/check" : "http://ayu.land"),
-    esp_http_client_set_method(client, HTTP_METHOD_GET);
+    esp_http_client_set_url(client, url);
     err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
@@ -225,12 +236,14 @@ void http_test_task(void *_unused)
       ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %"PRId64,
               esp_http_client_get_status_code(client),
               len);
-      ESP_LOG_BUFFER_HEX(TAG, local_response_buffer, min(len, SIMPLE_BUFFER_SIZE));
+      ESP_LOG_BUFFER_HEX(TAG, local_response_buffer, min(len, 128));
     } else {
       ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
     }
     vTaskDelay(5000 / portTICK_PERIOD_MS);
   }
 
+  esp_http_client_close(client);
+  vTaskDelete(NULL);  // Terminate current task
   return;
 }

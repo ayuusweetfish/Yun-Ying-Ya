@@ -54,7 +54,7 @@ void audio_init()
 
 static int wake_state = 0;
 
-SemaphoreHandle_t *buffer_mutex;
+SemaphoreHandle_t buffer_mutex;
 
 static int16_t *speech_buffer;
 #define SPEECH_BUFFER_SIZE (16000 * 5)
@@ -101,6 +101,7 @@ void audio_task(void *_unused)
       if (fetch_result->wakeup_state == WAKENET_DETECTED) {
         wake_state = 1;
       }
+      static int m = 0; if (wake_state == 0 && (m = (m + 1) % 64) == 63) wake_state = 1;
       assert(fetch_result->data_size == fetch_chunksize * sizeof(int16_t));
       feed_count -= fetch_chunksize;
 

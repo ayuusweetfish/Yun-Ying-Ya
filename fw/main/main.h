@@ -11,7 +11,7 @@ const char *simple_request(const char *url, const char *cookies);
 typedef struct post_handle_t post_handle_t;
 post_handle_t *post_create();
 void post_open(const post_handle_t *p);
-void post_write(const post_handle_t *p, void *data, size_t len);
+void post_write(const post_handle_t *p, const void *data, size_t len);
 void post_finish(const post_handle_t *p);
 void http_test_task(void *_unused);
 

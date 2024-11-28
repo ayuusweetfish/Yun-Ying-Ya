@@ -3,16 +3,24 @@ import { speechRecognition } from './speech-recognition.js'
 const serveReq = async (req) => {
   const url = new URL(req.url)
   if (req.method === 'POST' && url.pathname === '/') {
+    console.log('connected!')
     const sr = await speechRecognition()
     const reader = req.body.getReader()
+    let toalLen = 0
     while (true) {
-      const result = await reader.read()
-      if (result.done) break
+      try {
+        const result = await reader.read()
+        if (result.done) break
 
-      sr.push(result.value)
+        sr.push(result.value)
+      } catch (e) {
+        console.log(e)
+        break
+      }
     }
     try {
       const s = await sr.end()
+      console.log(`returning response "${s}"`)
       return new Response(s)
     } catch (e) {
       return new Response(e.message, { status: 500 })
