@@ -27,7 +27,7 @@ void app_main(void)
   ESP_ERROR_CHECK(ret);
 
   // Wi-Fi
-if (0) {
+if (1) {
   wifi_init_sta();
   xTaskCreate(&http_test_task, "http_get_task", 4096, NULL, 5, NULL);
 }

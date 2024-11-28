@@ -88,6 +88,8 @@ const char *simple_request(const char *url, const char *cookies)
 
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "esp_http_client_perform() failed with error %d", (int)err);
+
+    esp_http_client_cleanup(client);
     return "";
   }
 
@@ -99,6 +101,8 @@ const char *simple_request(const char *url, const char *cookies)
 
   local_response_buffer[len] = '\0';
   ESP_LOGI(TAG, "Response %s", local_response_buffer);
+
+  esp_http_client_cleanup(client);
   return local_response_buffer;
 }
 
