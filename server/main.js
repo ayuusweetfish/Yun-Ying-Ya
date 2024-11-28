@@ -5,17 +5,10 @@ const serveReq = async (req) => {
   if (req.method === 'POST' && url.pathname === '/') {
     console.log('connected!')
     const sr = await speechRecognition()
-    const reader = req.body.getReader()
-    while (true) {
-      try {
-        const result = await reader.read()
-        if (result.done) break
-
-        sr.push(result.value)
-      } catch (e) {
-        console.log(`Error reading response: ${e.message}`)
-        break
-      }
+    try {
+      for await (const value of req.body) sr.push(value)
+    } catch (e) {
+      console.log(`Error reading response: ${e.message}`)
     }
     try {
       const s = await sr.end()
