@@ -5,48 +5,40 @@
 #include "esp_tls.h"
 #include "esp_crt_bundle.h"
 
-#define MAX_HTTP_OUTPUT_BUFFER 4096
 #define TAG "HTTP client"
 
 #define min(_a, _b) ((_a) < (_b) ? (_a) : (_b))
 
-static esp_err_t http_event_handler(esp_http_client_event_t *evt)
+// Saves response buffer in `evt->user_data`
+// If `Set-Cookie` header is present, its header line is prepended to the payload
+// NOTE: Non-reentrant
+#define SIMPLE_BUFFER_SIZE 4096
+static esp_err_t simple_http_event_handler(esp_http_client_event_t *evt)
 {
   static int output_ptr;
   switch (evt->event_id) {
-    case HTTP_EVENT_ERROR:
-      ESP_LOGD(TAG, "HTTP_EVENT_ERROR");
-      break;
-    case HTTP_EVENT_ON_CONNECTED:
-      ESP_LOGI(TAG, "HTTP_EVENT_ON_CONNECTED");
-      break;
-    case HTTP_EVENT_HEADER_SENT:
-      ESP_LOGI(TAG, "HTTP_EVENT_HEADER_SENT");
-      break;
+    case HTTP_EVENT_ERROR: break;
+    case HTTP_EVENT_ON_CONNECTED: break;
+    case HTTP_EVENT_HEADER_SENT: break;
     case HTTP_EVENT_ON_HEADER:
-      ESP_LOGI(TAG, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
-      // XXX: Do not include this for ordinary requests
       if (strcmp(evt->header_key, "Set-Cookie") == 0) {
         output_ptr += snprintf(
           evt->user_data + output_ptr,
-          MAX_HTTP_OUTPUT_BUFFER - output_ptr,
+          SIMPLE_BUFFER_SIZE - output_ptr,
           "Set-Cookie: %s;", evt->header_value);
       }
       break;
     case HTTP_EVENT_ON_DATA:
-      ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
       if (!esp_http_client_is_chunked_response(evt->client)) {
-        int copy_len = min(evt->data_len, MAX_HTTP_OUTPUT_BUFFER - output_ptr);
+        int copy_len = min(evt->data_len, SIMPLE_BUFFER_SIZE - output_ptr);
         memcpy(evt->user_data + output_ptr, evt->data, copy_len);
         output_ptr += copy_len;
       }
       break;
     case HTTP_EVENT_ON_FINISH:
-      ESP_LOGI(TAG, "HTTP_EVENT_ON_FINISH");
       output_ptr = 0;
       break;
     case HTTP_EVENT_DISCONNECTED:
-      ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
       int mbedtls_err = 0;
       esp_err_t err = esp_tls_get_and_clear_last_error((esp_tls_error_handle_t)evt->data, &mbedtls_err, NULL);
       if (err != 0) {
@@ -67,42 +59,49 @@ const char *simple_request(const char *url, const char *cookies)
 {
   ESP_LOGI(TAG, "Simple GET request %s%s%s", url, cookies ? ", Cookie: " : "", cookies ? cookies : "");
 
-  static char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER];
+  static char local_response_buffer[SIMPLE_BUFFER_SIZE];
 
-  esp_http_client_handle_t client = esp_http_client_init(&(esp_http_client_config_t){
-    .url = url,
-    .auth_type = HTTP_AUTH_TYPE_NONE,
-    // .transport_type = (memcmp(url, "https:", 6) == 0) ? HTTP_TRANSPORT_OVER_SSL : HTTP_TRANSPORT_OVER_TCP,
-    .transport_type = HTTP_TRANSPORT_OVER_SSL,
-    .crt_bundle_attach = esp_crt_bundle_attach,
-    .event_handler = http_event_handler,
-    .user_data = local_response_buffer,
-  });
+  esp_err_t err = ESP_OK;
 
-  esp_http_client_set_method(client, HTTP_METHOD_GET);
-  if (cookies != NULL)
-    esp_http_client_set_header(client, "Cookie", cookies);
+  for (int att = 0; att < 3; att++) {
+    esp_http_client_handle_t client = esp_http_client_init(&(esp_http_client_config_t){
+      .url = url,
+      .auth_type = HTTP_AUTH_TYPE_NONE,
+      .transport_type = HTTP_TRANSPORT_OVER_SSL,
+      .crt_bundle_attach = esp_crt_bundle_attach,
+      .event_handler = simple_http_event_handler,
+      .method = HTTP_METHOD_GET,
+      .timeout_ms = 3000,
+      .user_data = local_response_buffer,
+    });
 
-  esp_err_t err;
-  err = esp_http_client_perform(client);
+    if (cookies != NULL)
+      esp_http_client_set_header(client, "Cookie", cookies);
 
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "esp_http_client_perform() failed with error %d", (int)err);
+    err = esp_http_client_perform(client);
 
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "esp_http_client_perform() failed with error %d", (int)err);
+      goto continue_retry;
+    }
+
+    int64_t len = esp_http_client_get_content_length(client);
+    if (len > SIMPLE_BUFFER_SIZE - 1) {
+      ESP_LOGI(TAG, "Content length too large (%"PRId64" bytes), truncated", len);
+      len = SIMPLE_BUFFER_SIZE - 1;
+    }
+
+    local_response_buffer[len] = '\0';
+    ESP_LOGI(TAG, "Response %s", local_response_buffer);
+
+  continue_retry:
     esp_http_client_cleanup(client);
-    return "";
+    if (err == ESP_OK) break;
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 
-  int64_t len = esp_http_client_get_content_length(client);
-  if (len > MAX_HTTP_OUTPUT_BUFFER - 1) {
-    ESP_LOGI(TAG, "Content length too large (%"PRId64" bytes), truncated", len);
-    len = MAX_HTTP_OUTPUT_BUFFER - 1;
-  }
-
-  local_response_buffer[len] = '\0';
-  ESP_LOGI(TAG, "Response %s", local_response_buffer);
-
-  esp_http_client_cleanup(client);
+  if (err != ESP_OK) return "";
   return local_response_buffer;
 }
 
@@ -120,17 +119,17 @@ static esp_err_t post_event_handler(esp_http_client_event_t *evt)
       ESP_LOGD(TAG, "POST HTTP_EVENT_ERROR");
       break;
     case HTTP_EVENT_ON_CONNECTED:
-      ESP_LOGI(TAG, "POST HTTP_EVENT_ON_CONNECTED");
+      ESP_LOGD(TAG, "POST HTTP_EVENT_ON_CONNECTED");
       p->resp_ptr = 0;
       break;
     case HTTP_EVENT_HEADER_SENT:
-      ESP_LOGI(TAG, "POST HTTP_EVENT_HEADER_SENT");
+      ESP_LOGD(TAG, "POST HTTP_EVENT_HEADER_SENT");
       break;
     case HTTP_EVENT_ON_HEADER:
-      ESP_LOGI(TAG, "POST HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
+      ESP_LOGD(TAG, "POST HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
       break;
     case HTTP_EVENT_ON_DATA:
-      ESP_LOGI(TAG, "POST HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+      ESP_LOGD(TAG, "POST HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
       if (!esp_http_client_is_chunked_response(evt->client)) {
         int copy_len = min(evt->data_len, 32768 - p->resp_ptr);
         memcpy(p->resp_buffer + p->resp_ptr, evt->data, copy_len);
@@ -138,10 +137,10 @@ static esp_err_t post_event_handler(esp_http_client_event_t *evt)
       }
       break;
     case HTTP_EVENT_ON_FINISH:
-      ESP_LOGI(TAG, "POST HTTP_EVENT_ON_FINISH");
+      ESP_LOGD(TAG, "POST HTTP_EVENT_ON_FINISH");
       break;
     case HTTP_EVENT_DISCONNECTED:
-      ESP_LOGI(TAG, "POST HTTP_EVENT_DISCONNECTED");
+      ESP_LOGD(TAG, "POST HTTP_EVENT_DISCONNECTED");
       int mbedtls_err = 0;
       esp_err_t err = esp_tls_get_and_clear_last_error((esp_tls_error_handle_t)evt->data, &mbedtls_err, NULL);
       if (err != 0) {
@@ -197,7 +196,7 @@ void post_finish(const post_handle_t *p)
 
 void http_test_task(void *_unused)
 {
-  static char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER];
+  static char local_response_buffer[SIMPLE_BUFFER_SIZE];
 
   esp_err_t err;
   esp_http_client_handle_t client = esp_http_client_init(&(esp_http_client_config_t){
@@ -205,7 +204,8 @@ void http_test_task(void *_unused)
     .auth_type = HTTP_AUTH_TYPE_NONE,
     .transport_type = HTTP_TRANSPORT_OVER_SSL,
     .crt_bundle_attach = esp_crt_bundle_attach,
-    .event_handler = http_event_handler,
+    .event_handler = simple_http_event_handler,
+    .method = HTTP_METHOD_GET,
     .user_data = local_response_buffer,
   });
 
@@ -225,7 +225,7 @@ void http_test_task(void *_unused)
       ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %"PRId64,
               esp_http_client_get_status_code(client),
               len);
-      ESP_LOG_BUFFER_HEX(TAG, local_response_buffer, min(len, MAX_HTTP_OUTPUT_BUFFER));
+      ESP_LOG_BUFFER_HEX(TAG, local_response_buffer, min(len, SIMPLE_BUFFER_SIZE));
     } else {
       ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
     }

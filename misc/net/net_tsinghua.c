@@ -573,11 +573,13 @@ static const char *net_tsinghua_login_sign(
 
 int net_tsinghua_perform_login(const char *user, const char *pwd)
 {
-  // XXX: Is this necessary? Maybe just fix `ac_id` at 35 (what is `ac_id`, after all?)
+  // Retrieve `ac_id` parameter
   const char *resp_1 = net_tsinghua_request("http://info.tsinghua.edu.cn/", NULL);
+  if (resp_1[0] == '\0') return -1;
+
   const char *ac_id_probe = "http://auth4.tsinghua.edu.cn/index_";
   const char *ac_id_start = strstr(resp_1, ac_id_probe);
-  if (ac_id_start == NULL) return -1;
+  if (ac_id_start == NULL) return +1; // Authrisation not necessary
   ac_id_start += strlen(ac_id_probe);
 
   int ac_id = 0;
