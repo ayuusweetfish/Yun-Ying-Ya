@@ -29,7 +29,8 @@ void app_main(void)
   // Wi-Fi
 if (1) {
   wifi_init_sta();
-  xTaskCreate(&http_test_task, "http_get_task", 4096, NULL, 5, NULL);
+  int http_test_result = http_test();
+  printf("HTTP test result: %d\n", http_test_result);
 }
 
   // I2S input
@@ -63,6 +64,9 @@ if (1) {
         printf("Result: %s\n", s != NULL ? s : "(null)");
         audio_clear_wake_state();
       }
+      printf("Heap free: %zu / largest %zu\n",
+        heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT),
+        heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
     }
   }
 

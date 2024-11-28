@@ -5,7 +5,7 @@
 #include "esp_tls.h"
 #include "esp_crt_bundle.h"
 
-#define TAG "HTTP client"
+static const char *TAG = "HTTP client";
 
 #define min(_a, _b) ((_a) < (_b) ? (_a) : (_b))
 
@@ -29,11 +29,9 @@ static esp_err_t simple_http_event_handler(esp_http_client_event_t *evt)
       }
       break;
     case HTTP_EVENT_ON_DATA:
-      if (!esp_http_client_is_chunked_response(evt->client)) {
-        int copy_len = min(evt->data_len, SIMPLE_BUFFER_SIZE - output_ptr);
-        memcpy(evt->user_data + output_ptr, evt->data, copy_len);
-        output_ptr += copy_len;
-      }
+      int copy_len = min(evt->data_len, SIMPLE_BUFFER_SIZE - output_ptr);
+      memcpy(evt->user_data + output_ptr, evt->data, copy_len);
+      output_ptr += copy_len;
       break;
     case HTTP_EVENT_ON_FINISH:
       output_ptr = 0;
@@ -117,8 +115,7 @@ post_handle_t *post_create()
     // .url = "https://play.ayu.land/ya",
     .url = "http://45.63.5.138:24118/",
     .auth_type = HTTP_AUTH_TYPE_NONE,
-    // .transport_type = HTTP_TRANSPORT_OVER_SSL,
-    .transport_type = HTTP_TRANSPORT_OVER_TCP,
+    .transport_type = HTTP_TRANSPORT_OVER_SSL,
     .crt_bundle_attach = esp_crt_bundle_attach,
     .method = HTTP_METHOD_POST,
     .timeout_ms = 30000,
@@ -161,9 +158,11 @@ const char *post_finish(const post_handle_t *p)
   return buf;
 }
 
-void http_test_task(void *_unused)
+int http_test()
 {
-  static char local_response_buffer[SIMPLE_BUFFER_SIZE];
+  static const char *TAG = "HTTP(S) test";
+
+  ESP_LOGI(TAG, "Testing network reachability");
 
   esp_err_t err;
   esp_http_client_handle_t client = esp_http_client_init(&(esp_http_client_config_t){
@@ -171,32 +170,34 @@ void http_test_task(void *_unused)
     .auth_type = HTTP_AUTH_TYPE_NONE,
     .transport_type = HTTP_TRANSPORT_OVER_SSL,
     .crt_bundle_attach = esp_crt_bundle_attach,
-    .event_handler = simple_http_event_handler,
     .method = HTTP_METHOD_GET,
     .timeout_ms = 30000,
-    .user_data = local_response_buffer,
   });
 
-  for (int i = 0; i <= 1; i++) {
-    const char *url = (i == 0 ? "https://www.howsmyssl.com/a/check" : "http://ayu.land");
-    ESP_LOGI(TAG, "HTTP GET sending %s", url);
-
-    esp_http_client_set_url(client, url);
-    err = esp_http_client_perform(client);
-
-    if (err == ESP_OK) {
-      int64_t len = esp_http_client_get_content_length(client);
-      ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %"PRId64,
-              esp_http_client_get_status_code(client),
-              len);
-      ESP_LOG_BUFFER_HEX(TAG, local_response_buffer, min(len, 128));
-    } else {
-      ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
-    }
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
+  err = esp_http_client_open(client, 0);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Client open failed: %s", esp_err_to_name(err));
+    return -1;
   }
 
+  const int BUF_SIZE = 1024;
+  char *buf = heap_caps_malloc(BUF_SIZE, MALLOC_CAP_SPIRAM);
+  int content_len = esp_http_client_fetch_headers(client);
+  int read_len = esp_http_client_read(client, buf, BUF_SIZE - 1);
+  if (content_len == -1) {
+    ESP_LOGW(TAG, "Did not receive complete response: %s", esp_err_to_name(err));
+
+    esp_http_client_close(client);
+    free(buf);
+    return -2;
+  }
+  buf[read_len] = '\0';
+
+  int status = esp_http_client_get_status_code(client);
+  ESP_LOGI(TAG, "HTTP response code %d, content length %d (read %d):\n%s",
+    status, content_len, read_len, buf);
+
   esp_http_client_close(client);
-  vTaskDelete(NULL);  // Terminate current task
-  return;
+  free(buf);
+  return 1;
 }

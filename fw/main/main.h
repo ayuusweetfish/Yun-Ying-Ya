@@ -13,7 +13,7 @@ post_handle_t *post_create();
 void post_open(const post_handle_t *p);
 void post_write(const post_handle_t *p, const void *data, size_t len);
 const char *post_finish(const post_handle_t *p);
-void http_test_task(void *_unused);
+int http_test();
 
 void i2s_init();
 esp_err_t i2s_enable();
