@@ -1,6 +1,7 @@
 #pragma once
 
 #include "esp_err.h"
+#include <stdbool.h>
 
 void wifi_init_sta();
 
@@ -24,3 +25,4 @@ int audio_wake_state();
 void audio_clear_wake_state();
 const int16_t *audio_speech_buffer();
 int audio_speech_buffer_size();
+bool audio_speech_ended();

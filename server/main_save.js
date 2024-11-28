@@ -19,3 +19,5 @@ const serveReq = async (req) => {
 
 const serverPort = +Deno.env.get('SERVEPORT') || 24118
 const server = Deno.serve({ port: serverPort }, serveReq)
+
+// ffmpeg -ar 16000 -f s16le -acodec pcm_s16le -i record_1732799532755.bin record_1732799532755.wav

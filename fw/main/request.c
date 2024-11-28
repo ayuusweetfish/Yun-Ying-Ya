@@ -9,6 +9,9 @@ static const char *TAG = "HTTP client";
 
 #define min(_a, _b) ((_a) < (_b) ? (_a) : (_b))
 
+// ============ "Simple request" ============
+// Fixed functionality: only cares about GET requests, plaintext responses, and Set-Cookie
+
 // Saves response buffer in `evt->user_data`
 // If `Set-Cookie` header is present, its header line is prepended to the payload
 // NOTE: Non-reentrant
@@ -103,6 +106,8 @@ const char *simple_request(const char *url, const char *cookies)
   return local_response_buffer;
 }
 
+// ============ Streaming POST request ============
+
 typedef struct post_handle_t {
   esp_http_client_handle_t client;
 } post_handle_t;
@@ -171,7 +176,7 @@ int http_test()
     .transport_type = HTTP_TRANSPORT_OVER_SSL,
     .crt_bundle_attach = esp_crt_bundle_attach,
     .method = HTTP_METHOD_GET,
-    .timeout_ms = 30000,
+    .timeout_ms = 15000,
   });
 
   err = esp_http_client_open(client, 0);

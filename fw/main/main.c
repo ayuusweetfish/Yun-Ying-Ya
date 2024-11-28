@@ -39,34 +39,36 @@ if (1) {
   // Audio processing
   audio_init();
 
+  // Streaming POST request handle
   post_handle_t *p = post_create();
 
-  int state = 0;
+  enum {
+    STATE_IDLE,
+    STATE_SPEECH,
+  } state = STATE_IDLE;
   int last_sent = 0;
   while (1) {
     vTaskDelay(100 / portTICK_PERIOD_MS);
     if (state == 0 && audio_wake_state() != 0) {
       printf("Wake-up word detected\n");
-      state = 1;
+      state = STATE_SPEECH;
       last_sent = 0;
       post_open(p);
     }
-    if (state == 1) {
+    if (state == STATE_SPEECH) {
       int n = audio_speech_buffer_size();
       printf("Speech buffer size %d\n", n);
+      // Send new samples to the server
       if (n > last_sent) {
         post_write(p, audio_speech_buffer() + last_sent, (n - last_sent) * sizeof(int16_t));
         last_sent = n;
       }
-      if (n >= 16000 * 5) {
-        state = 0;
+      if (audio_speech_ended()) {
+        state = STATE_IDLE;
         const char *s = post_finish(p);
         printf("Result: %s\n", s != NULL ? s : "(null)");
         audio_clear_wake_state();
       }
-      printf("Heap free: %zu / largest %zu\n",
-        heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT),
-        heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
     }
   }
 

@@ -144,3 +144,9 @@ int audio_speech_buffer_size()
   xSemaphoreGive(buffer_mutex);
   return ret;
 }
+
+bool audio_speech_ended()
+{
+  // TODO
+  return (speech_buffer_ptr >= SPEECH_BUFFER_SIZE);
+}
