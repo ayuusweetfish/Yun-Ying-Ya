@@ -102,7 +102,7 @@ void audio_task(void *_unused)
         wake_state = 1;
       }
       // XXX: Debug use
-      static int m = 0; if (wake_state == 0 && (m = (m + 1) % 64) == 63) wake_state = 1;
+      // static int m = 0; if (wake_state == 0 && (m = (m + 1) % 64) == 63) wake_state = 1;
       assert(fetch_result->data_size == fetch_chunksize * sizeof(int16_t));
       feed_count -= fetch_chunksize;
 
@@ -115,6 +115,7 @@ void audio_task(void *_unused)
         memcpy(speech_buffer + speech_buffer_ptr, fetch_result->data, copy_count * sizeof(int16_t));
         speech_buffer_ptr += copy_count;
       }
+      led_set_state(wake_state != 0 && !audio_speech_ended() ? 3 : 2);
     }
   }
 }

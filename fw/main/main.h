@@ -26,3 +26,6 @@ void audio_clear_wake_state();
 const int16_t *audio_speech_buffer();
 int audio_speech_buffer_size();
 bool audio_speech_ended();
+
+void led_init();
+void led_set_state(int state);

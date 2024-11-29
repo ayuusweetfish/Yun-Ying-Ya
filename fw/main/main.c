@@ -18,6 +18,8 @@ void app_main(void)
 {
   print_chip_info();
 
+  led_init();
+
   // NVS
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -29,9 +31,11 @@ void app_main(void)
   // Wi-Fi
 if (1) {
   wifi_init_sta();
+  led_set_state(1);
   int http_test_result = http_test();
   printf("HTTP test result: %d\n", http_test_result);
 }
+  led_set_state(2);
 
   // I2S input
   i2s_init();

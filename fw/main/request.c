@@ -176,7 +176,7 @@ int http_test()
     .transport_type = HTTP_TRANSPORT_OVER_SSL,
     .crt_bundle_attach = esp_crt_bundle_attach,
     .method = HTTP_METHOD_GET,
-    .timeout_ms = 15000,
+    .timeout_ms = 30000,
   });
 
   err = esp_http_client_open(client, 0);
