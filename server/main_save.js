@@ -6,7 +6,7 @@ const serveReq = async (req) => {
     let f
     try {
       f = await Deno.open(fileName, { write: true, create: true, truncate: true })
-      await req.body.pipeTo(f.writable)
+      await req.body.pipeThrough(new DecompressionStream('gzip')).pipeTo(f.writable)
     } catch (e) {
       console.log('Error', e)
       return new Response(e.message, { status: 500 })
@@ -20,4 +20,5 @@ const serveReq = async (req) => {
 const serverPort = +Deno.env.get('SERVEPORT') || 24118
 const server = Deno.serve({ port: serverPort }, serveReq)
 
+// gzip < 聆小璐.pcm | curl http://127.0.0.1:24118 -H 'Transfer-Encoding: chunked' --data-binary @-
 // ffmpeg -ar 16000 -f s16le -acodec pcm_s16le -i record_1732799532755.bin record_1732799532755.wav
