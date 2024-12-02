@@ -22,10 +22,17 @@ void i2s_init()
     // Set pins according to hardware setup
     .gpio_cfg = {
       .mclk = I2S_GPIO_UNUSED,
+#if 0
       .bclk = GPIO_NUM_15,
       .ws   = GPIO_NUM_16,
       .dout = I2S_GPIO_UNUSED,
       .din  = GPIO_NUM_17,
+#else
+      .bclk = GPIO_NUM_14,
+      .ws   = GPIO_NUM_12,
+      .dout = I2S_GPIO_UNUSED,
+      .din  = GPIO_NUM_13,
+#endif
       .invert_flags = {
         .mclk_inv = false,
         .bclk_inv = false,

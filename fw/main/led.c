@@ -2,6 +2,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "esp_log.h"
+#include "driver/gpio.h"
 
 #include "led_strip.h"
 
@@ -40,6 +41,16 @@ void led_init()
   ESP_LOGI(TAG, "Initialised LED with RMT backend");
   led_strip_set_pixel(led_strip, 0, 10, 6, 2);
   led_strip_refresh(led_strip);
+
+  // XXX: Testing. Write to GPIO
+  gpio_config(&(gpio_config_t){
+    .pin_bit_mask = (1 << 17) | (1 << 18) | (1 << 21),
+    .mode = GPIO_MODE_OUTPUT,
+    .pull_up_en = GPIO_PULLUP_ENABLE,
+  });
+  gpio_set_level(17, 0);
+  gpio_set_level(18, 0);
+  gpio_set_level(21, 0);
 }
 
 void led_set_state(int state)
@@ -48,4 +59,8 @@ void led_set_state(int state)
   if (state == 2) led_strip_set_pixel(led_strip, 0, 2, 2, 2);
   if (state == 3) led_strip_set_pixel(led_strip, 0, 10, 6, 2);
   led_strip_refresh(led_strip);
+
+  gpio_set_level(17, state == 1 ? 0 : 1);
+  gpio_set_level(18, state == 2 ? 0 : 1);
+  gpio_set_level(21, state == 3 ? 0 : 1);
 }
