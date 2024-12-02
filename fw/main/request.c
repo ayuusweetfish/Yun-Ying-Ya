@@ -119,6 +119,7 @@ post_handle_t *post_create()
   p->client = esp_http_client_init(&(esp_http_client_config_t){
     // .url = "https://play.ayu.land/ya",
     .url = "http://45.63.5.138:24118/",
+    // .url = "http://183.173.46.199:24118/",
     .auth_type = HTTP_AUTH_TYPE_NONE,
     .transport_type = HTTP_TRANSPORT_OVER_SSL,
     .crt_bundle_attach = esp_crt_bundle_attach,

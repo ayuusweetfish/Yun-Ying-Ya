@@ -103,6 +103,7 @@ void audio_task(void *_unused)
       }
       // XXX: Debug use
       // static int m = 0; if (wake_state == 0 && (m = (m + 1) % 64) == 63) wake_state = 1;
+      if (fgetc(stdin) == 'h') wake_state = 1;
       assert(fetch_result->data_size == fetch_chunksize * sizeof(int16_t));
       feed_count -= fetch_chunksize;
 
