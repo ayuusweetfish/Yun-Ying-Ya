@@ -44,7 +44,16 @@ void i2s_init()
   rx_std_cfg.slot_cfg.slot_mask = I2S_STD_SLOT_RIGHT;
   ESP_ERROR_CHECK(i2s_channel_init_std_mode(rx_chan, &rx_std_cfg));
 
+#if 0
   gpio_set_pull_mode(GPIO_NUM_17, GPIO_PULLDOWN_ONLY);
+#else
+  gpio_set_pull_mode(GPIO_NUM_13, GPIO_PULLDOWN_ONLY);
+  gpio_config(&(gpio_config_t){
+    .pin_bit_mask = (1 << 15),
+    .mode = GPIO_MODE_OUTPUT,
+  });
+  gpio_set_level(15, 1);
+#endif
 
   ESP_LOGI(TAG, "I2S input initialised");
 }
