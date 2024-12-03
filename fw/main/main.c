@@ -8,6 +8,7 @@
 #include "esp_chip_info.h"
 #include "esp_flash.h"
 #include "esp_log.h"
+#include "esp_pm.h"
 #include "nvs_flash.h"
 
 #define TAG "main"
@@ -45,6 +46,13 @@ if (1) {
 
   // Streaming POST request handle
   post_handle_t *p = post_create();
+
+  // `esp_pm/include/esp_pm.h`: Type is no longer implementation-specific
+  ESP_ERROR_CHECK(esp_pm_configure(&(esp_pm_config_t){
+    .max_freq_mhz = 240,
+    .min_freq_mhz =  80,
+    .light_sleep_enable = true,
+  }));
 
   enum {
     STATE_IDLE,
