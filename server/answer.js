@@ -30,7 +30,7 @@ const requestLLM_OpenAI = (endpoint, model, temperature, key) => async (messages
   return [resp, text]
 }
 
-const requestLLM_Google = (model, key) => async (messages) => {
+const requestLLM_Google = (model, temperature, key) => async (messages) => {
   // Ref: https://ai.google.dev/api/generate-content#v1beta.models.generateContent
   const req = await fetch(
     'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key,
@@ -40,6 +40,9 @@ const requestLLM_Google = (model, key) => async (messages) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        generationConfig: {
+          temperature: temperature,
+        },
         systemInstruction: { parts: [{ text:
           messages.filter(({ role }) => role === 'system')
                   .map(({ content }) => content).join('\n'),
@@ -71,7 +74,7 @@ const requestLLM_YiLightning = requestLLM_OpenAI(
   Deno.env.get('API_KEY_01AI') || prompt('API key (01.AI):')
 )
 const requestLLM_Gemini15Flash = requestLLM_Google(
-  'gemini-1.5-flash', 
+  'gemini-1.5-flash', 0.8,
   Deno.env.get('API_KEY_GOOGLE') || prompt('API key (Google):')
 )
 
@@ -89,11 +92,27 @@ const run = async (pedestrianMessage) => {
   console.log(Deno.inspect(lightResp, { depth: 99 }), Date.now() - t0)
   console.log('----')
   console.log(lightFullText)
-/*
+
+  const [programResp, programFullText] = await requestLLM_Gemini15Flash([
+    { role: 'system', content: `
+请你按照给出的描述为一盏小灯编写动画效果。
+
+程序以 Lua 语言编写，你可以使用以下函数，不要使用 \`os\` 获取时间。动画的速度尽量慢一些，不要以过快的频率闪烁，在合适的地方加入等待（如果可以的话，尽量使每个段落都能持续三秒以上）。请细心地选取合适的颜色，以更好地传达你的想法。
+
+动画函数（颜色分量取值范围均为 0~1）：
+- delay(t): 等待 t 毫秒；
+- fade(r, g, b, t): 从当前颜色过渡到新的颜色 (r, g, b)，历经 t 毫秒；
+- blink(r, g, b, n, t1, t2): 在当前颜色与指定颜色 (r, g, b) 之间往返闪烁 n 次，每次持续 t1 毫秒、间隔 t2 毫秒，最后回到当前颜色；
+- breath(r, g, b, n, t): 在当前颜色与指定颜色 (r, g, b) 之间往返呼吸 n 次，周期为 t 毫秒，最后回到当前颜色。
+
+初始颜色为透明 (0, 0, 0)。
+`.trim() },
+    { role: 'user', content: lightFullText.trim() },
+  ])
+  console.log(Deno.inspect(programResp, { depth: 99 }), Date.now() - t0)
   console.log('----')
-  const code = (lightFullText.match(/^```[^\n]+\n(.*?)(?<=\n)```\s*$/sm) || [])[1]
+  const code = (programFullText.match(/^```[^\n]+\n(.*?)(?<=\n)```\s*$/sm) || [])[1]
   console.log(code)
-*/
 }
 
 // await run('小鸭小鸭，唱首歌吧！')
