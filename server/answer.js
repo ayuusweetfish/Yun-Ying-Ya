@@ -85,7 +85,7 @@ export const answerDescription = async (pedestrianMessage) => {
     { role: 'system', content: `
 雪地里有一只由雪堆成的小鸭子。小鸭不会说话，但它的身体里有一个彩色小灯，小鸭以灯光的颜色回应行人；乘着自由的想象，它觉得变化的色彩也许能承载世间的一切。
 
-请你展开想象，描述小鸭的回应。可以采用各类变化效果（如渐变、呼吸、闪烁等等，以及不同的动画节奏），但请让动画尽量简洁，使行人可以直观地明白其中的含义，不要使用过多的动画段落。可以将颜色赋予文学性，但不必展开过多的描写，请更多关注小灯本身，用颜色与动画展现你的想象。请尽量减少使用深色；另外，不必在开头加入包括象征“小鸭思考”的动画段落。只回应本次对话即可，不用续写。
+请你展开想象，描述小鸭的回应。可以采用各类变化效果（如渐变、呼吸、闪烁等等，以及不同的动画节奏），但请让动画尽量简洁，使行人可以直观地明白其中的含义，不要使用过多的动画段落。可以将颜色赋予文学性，但不必展开过多的描写，请更多关注小灯本身，用颜色与动画展现你的想象。请注意小灯发出的光不能制造深色效果，请以亮度明暗来表达；另外，不必在开头加入包括象征“小鸭思考”的动画段落。只回应本次对话即可，不用续写。
 `.trim() },
     { role: 'user', content: pedestrianMessage },
   ])
@@ -103,14 +103,14 @@ export const answerProgram = async (lightDescription) => {
     { role: 'system', content: `
 请你按照给出的描述为一盏小灯编写动画效果。
 
-程序以 Lua 语言编写，你可以使用以下函数，不要使用 \`os\` 获取时间。动画的速度尽量慢一些，不要以过快的频率闪烁，在合适的地方加入等待（如果可以的话，尽量使每个段落都能持续三秒以上）。请细心地选取合适的颜色，以更好地传达你的想法。
+程序以 Lua 语言编写，你可以使用以下函数，不要使用 \`os\` 库。动画的速度尽量慢一些，不要以过快的频率闪烁，在合适的地方加入等待（在可能的部分情形下，尽量使每个段落都能持续三秒以上；闪烁也可以慢些或多几次）。请细心地选取合适的颜色，以更好地传达你的想法。
 
 动画函数（颜色分量取值范围均为 0~1）：
 - delay(t): 等待 t 毫秒；
 - fade(r, g, b, t): 从当前颜色过渡到新的颜色 (r, g, b)，历经 t 毫秒；
 - blink(r, g, b, n, t1, t2): 在当前颜色与指定颜色 (r, g, b) 之间往返闪烁 n 次，每次持续 t1 毫秒、间隔 t2 毫秒，最后回到当前颜色；
 - breath(r, g, b, n, t): 交替色呼吸——在当前颜色与指定颜色 (r, g, b) 之间往返呼吸 n 次，周期为 t 毫秒，最后回到当前颜色。
-- flicker(r, g, b, k, n, t): 明暗呼吸——先过渡到指定颜色 (r, g, b)，然后在该颜色与其 k 倍亮度之间往返呼吸 n 次，周期为 t 毫秒，最后回到新颜色（1 倍亮度）。
+  - 如果需要明暗呼吸，请先采用 \`fade\` 过渡到目标颜色，再以更暗或更亮的颜色调用 \`breath\`。
 
 初始颜色为透明 (0, 0, 0)。
 `.trim() },
@@ -119,10 +119,14 @@ export const answerProgram = async (lightDescription) => {
   // console.log(Deno.inspect(programResp, { depth: 99 }), Date.now() - t0)
   console.log(programFullText)
   console.log(Date.now() - t0)
-  const code = (programFullText.match(/^```[^\n]+\n(.*?)(?<=\n)```\s*$/sm) || [])[1]
-  console.log(code)
 
-  return code
+  const codeSegments = [
+    ...
+    programFullText.matchAll(/^```[^\n]*\n(.*?)(?<=\n)```\s*$/smg)
+      .map(([_, code]) => code)
+  ]
+  if (codeSegments.length === 0) throw new Error('LLM did not return valid code')
+  return codeSegments.join('\n')
 }
 
 // ======== Test run ======== //

@@ -19,6 +19,8 @@ export const evalProgram = async (program) => {
     if (t === 0) { return '' }
     else if (t < 0) throw new Error('Negative duration')
     T += t
+    if (T >= 90000)
+      throw new Error(`Total duration too long`)
     return `${Math.floor(t)} ${cmd}${args.length > 0 ? ' ' : ''}${args.join(' ')}\n`
   }
   const tint = (r, g, b) => {
@@ -54,19 +56,8 @@ export const evalProgram = async (program) => {
         s.push(line(t, 'B', tint(r, g, b)))
       }
     })
-    l.global.set('flicker', (r, g, b, k, n, t) => {
-      checkNum(r, g, b, k, n, t)
-      s.push(line(t / 2, 'F', tint(r, g, b)))
-      for (let i = 0; i < n; i++) {
-        s.push(line(t, 'B', tint(r * k, g * k, b * k)))
-      }
-      ;[R, G, B] = [r, g, b]
-    })
 
     await l.doString(program)
-
-    if (T >= 90000)
-      throw new Error(`Total duration too long`)
   } catch (e) {
     throw e
   } finally {
