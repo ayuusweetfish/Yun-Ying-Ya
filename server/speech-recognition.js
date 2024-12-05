@@ -1,6 +1,6 @@
-const APP_ID = Deno.env.get('APP_ID') || prompt('App ID:')
-const API_KEY = Deno.env.get('API_KEY') || prompt('API key:')
-const API_SECRET = Deno.env.get('API_SECRET') || prompt('API secret:')
+const APP_ID = Deno.env.get('API_KEY_IFLYTEK_APP_ID') || prompt('App ID (iFlytek):')
+const API_KEY = Deno.env.get('API_KEY_IFLYTEK_KEY') || prompt('API key (iFlytek):')
+const API_SECRET = Deno.env.get('API_KEY_IFLYTEK_SECRET') || prompt('API secret (iFlytek):')
 
 import { encodeBase64 } from 'jsr:@std/encoding/base64'
 import { Buffer } from 'node:buffer'
