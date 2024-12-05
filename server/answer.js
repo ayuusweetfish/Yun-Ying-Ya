@@ -109,7 +109,8 @@ export const answerProgram = async (lightDescription) => {
 - delay(t): 等待 t 毫秒；
 - fade(r, g, b, t): 从当前颜色过渡到新的颜色 (r, g, b)，历经 t 毫秒；
 - blink(r, g, b, n, t1, t2): 在当前颜色与指定颜色 (r, g, b) 之间往返闪烁 n 次，每次持续 t1 毫秒、间隔 t2 毫秒，最后回到当前颜色；
-- breath(r, g, b, n, t): 在当前颜色与指定颜色 (r, g, b) 之间往返呼吸 n 次，周期为 t 毫秒，最后回到当前颜色。
+- breath(r, g, b, n, t): 交替色呼吸——在当前颜色与指定颜色 (r, g, b) 之间往返呼吸 n 次，周期为 t 毫秒，最后回到当前颜色。
+- flicker(r, g, b, k, n, t): 明暗呼吸——先过渡到指定颜色 (r, g, b)，然后在该颜色与其 k 倍亮度之间往返呼吸 n 次，周期为 t 毫秒，最后回到新颜色（1 倍亮度）。
 
 初始颜色为透明 (0, 0, 0)。
 `.trim() },

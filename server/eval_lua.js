@@ -3,6 +3,11 @@ const luaFactory = new LuaFactory()
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x))
 
+const checkNum = (...nums) => {
+  for (const n of nums)
+    if (!isFinite(n)) throw new Error('Invalid numeric argument to Lua system function')
+}
+
 export const evalProgram = async (program) => {
   const l = await luaFactory.createEngine()
 
@@ -25,12 +30,16 @@ export const evalProgram = async (program) => {
 
   try {
     l.global.set('delay', (t) => {
+      checkNum(t)
       s.push(line(t, 'D'))
     })
     l.global.set('fade', (r, g, b, t) => {
+      checkNum(r, g, b, t)
       s.push(line(t, 'F', tint(r, g, b)))
+      ;[R, G, B] = [r, g, b]
     })
     l.global.set('blink', (r, g, b, n, t1, t2) => {
+      checkNum(r, g, b, n, t1, t2)
       const ramp = Math.min(t1, t2) * 0.2
       for (let i = 0; i < n; i++) {
         s.push(line(ramp, 'F', tint(r, g, b)))
@@ -40,9 +49,18 @@ export const evalProgram = async (program) => {
       }
     })
     l.global.set('breath', (r, g, b, n, t) => {
+      checkNum(r, g, b, n, t)
       for (let i = 0; i < n; i++) {
         s.push(line(t, 'B', tint(r, g, b)))
       }
+    })
+    l.global.set('flicker', (r, g, b, k, n, t) => {
+      checkNum(r, g, b, k, n, t)
+      s.push(line(t / 2, 'F', tint(r, g, b)))
+      for (let i = 0; i < n; i++) {
+        s.push(line(t, 'B', tint(r * k, g * k, b * k)))
+      }
+      ;[R, G, B] = [r, g, b]
     })
 
     await l.doString(program)
@@ -86,6 +104,9 @@ if (import.meta.main) {
     end
 
     delay(1000)
+
+    -- Test flicker
+    flicker(0.4, 0.5, 0.6, 0.5, 3, 1000)
 
     -- 光芒持续了几秒后，逐渐减弱，最后以一个缓慢的淡出结束了回应，仿佛星星隐没在黎明的天际。
     fade(0, 0, 0, 3000) -- 缓慢淡出到黑色
