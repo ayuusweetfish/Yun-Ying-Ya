@@ -112,7 +112,7 @@ export const answerProgram = async (lightDescription) => {
 - breath(r, g, b, n, t): 交替色呼吸——在当前颜色与指定颜色 (r, g, b) 之间往返呼吸 n 次，周期为 t 毫秒，最后回到当前颜色。
   - 如果需要明暗呼吸，请先采用 \`fade\` 过渡到目标颜色，再以更暗或更亮的颜色调用 \`breath\`。
 
-初始颜色为透明 (0, 0, 0)。
+初始颜色为透明 (0, 0, 0)。请在动画序列完成后结束，不必无限循环。
 `.trim() },
     { role: 'user', content: lightDescription.trim() },
   ])

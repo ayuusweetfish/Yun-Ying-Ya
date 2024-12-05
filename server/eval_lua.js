@@ -57,7 +57,9 @@ export const evalProgram = async (program) => {
       }
     })
 
-    await l.doString(program)
+    await l.doString(
+      `debug.sethook(function (ev) error('Lua timeout') end, '', 1e6)\n`
+      + program)
   } catch (e) {
     throw e
   } finally {
@@ -96,10 +98,9 @@ if (import.meta.main) {
 
     delay(1000)
 
-    -- Test flicker
-    flicker(0.4, 0.5, 0.6, 0.5, 3, 1000)
-
     -- 光芒持续了几秒后，逐渐减弱，最后以一个缓慢的淡出结束了回应，仿佛星星隐没在黎明的天际。
     fade(0, 0, 0, 3000) -- 缓慢淡出到黑色
+
+    -- while true do end
   `))
 }
