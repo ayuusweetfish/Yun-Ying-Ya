@@ -157,13 +157,12 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
   }
 })
 
-if (0) {
-// ffmpeg -i 6-聆小璐-助理.wav -t 4 -ar 16000 -f s16le -acodec pcm_s16le 聆小璐.pcm
-
-const r = await speechRecognition()
-const fileContent = await Deno.readFile('聆小璐.pcm')
-r.push(fileContent)
-const s = await r.end()
-console.log(s)
-
+// ======== Test run ======== //
+if (import.meta.main) {
+  // ffmpeg -i 6-聆小璐-助理.wav -t 4 -ar 16000 -f s16le -acodec pcm_s16le 聆小璐.pcm
+  const r = await speechRecognition()
+  const fileContent = await Deno.readFile('聆小璐.pcm')
+  r.push(fileContent)
+  const s = await r.end()
+  console.log(s)
 }

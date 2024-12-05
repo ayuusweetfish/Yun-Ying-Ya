@@ -17,8 +17,8 @@ const serveReq = async (req) => {
   return new Response('Void space, please return', { status: 404 })
 }
 
-const serverPort = +Deno.env.get('SERVEPORT') || 24118
+const serverPort = +Deno.env.get('SERVEPORT') || 24678
 const server = Deno.serve({ port: serverPort }, serveReq)
 
-// gzip < 聆小璐.pcm | curl http://127.0.0.1:24118 -H 'Transfer-Encoding: chunked' --data-binary @-
+// gzip < 聆小璐.pcm | curl http://127.0.0.1:24678 -H 'Transfer-Encoding: chunked' --data-binary @-
 // ffmpeg -ar 16000 -f s16le -acodec pcm_s16le -i record_1732799532755.bin record_1732799532755.wav

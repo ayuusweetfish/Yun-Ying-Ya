@@ -36,10 +36,10 @@ const serveReq = async (req) => {
   return new Response('Void space, please return', { status: 404 })
 }
 
-const serverPort = +Deno.env.get('SERVE_PORT') || 24118
+const serverPort = +Deno.env.get('SERVE_PORT') || 24678
 const server = Deno.serve({ port: serverPort }, serveReq)
 
-// curl http://127.0.0.1:24118 -H 'Transfer-Encoding: chunked' --data-binary '@聆小璐.pcm' --limit-rate 50k
+// curl http://127.0.0.1:24678 -H 'Transfer-Encoding: chunked' --data-binary '@聆小璐.pcm' --limit-rate 50k
 // Also try: limit 10k, 1k, no limit
 
-// curl http://127.0.0.1:24118/message -d '小鸭小鸭，星星是什么样子的？'
+// curl http://127.0.0.1:24678/message -d '小鸭小鸭，星星是什么样子的？'

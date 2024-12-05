@@ -118,6 +118,8 @@ export const answerProgram = async (pedestrianMessage) => {
   return code
 }
 
-if (0)
-// await answerProgram('小鸭小鸭，唱首歌吧！')
-await answerProgram('小鸭小鸭，星星是什么样子的？')
+// ======== Test run ======== //
+if (import.meta.main) {
+  await answerProgram('小鸭小鸭，唱首歌吧！')
+  await answerProgram('小鸭小鸭，星星是什么样子的？')
+}
