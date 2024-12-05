@@ -14,7 +14,7 @@ export const evalProgram = async (program) => {
     if (t === 0) { return '' }
     else if (t < 0) throw new Error('Negative duration')
     T += t
-    return `${Math.floor(t)} ${cmd}${args.length > 0 ? ' ' : ''}${args.join(' ')}`
+    return `${Math.floor(t)} ${cmd}${args.length > 0 ? ' ' : ''}${args.join(' ')}\n`
   }
   const tint = (r, g, b) => {
     r = Math.round(clamp(r, 0, 1) * 1000)
@@ -55,7 +55,7 @@ export const evalProgram = async (program) => {
     l.global.close()
   }
 
-  return s.join('\n')
+  return s.join('')
 }
 
 // ======== Test run ======== //
