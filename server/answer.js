@@ -78,10 +78,10 @@ const requestLLM_Gemini15Flash = requestLLM_Google(
   Deno.env.get('API_KEY_GOOGLE') || prompt('API key (Google):')
 )
 
-export const answerProgram = async (pedestrianMessage) => {
+export const answerDescription = async (pedestrianMessage) => {
   const t0 = Date.now()
 
-  const [lightResp, lightFullText] = await requestLLM_YiLightning([
+  const [lightResp, lightDescription] = await requestLLM_YiLightning([
     { role: 'system', content: `
 雪地里有一只由雪堆成的小鸭子。小鸭不会说话，但它的身体里有一个彩色小灯，小鸭以灯光的颜色回应行人；乘着自由的想象，它觉得变化的色彩也许能承载世间的一切。
 
@@ -90,8 +90,14 @@ export const answerProgram = async (pedestrianMessage) => {
     { role: 'user', content: pedestrianMessage },
   ])
   // console.log(Deno.inspect(lightResp, { depth: 99 }), Date.now() - t0)
-  console.log(lightFullText, Date.now() - t0)
-  console.log('----')
+  console.log(lightDescription)
+  console.log(Date.now() - t0)
+
+  return lightDescription
+}
+
+export const answerProgram = async (lightDescription) => {
+  const t0 = Date.now()
 
   const [programResp, programFullText] = await requestLLM_Gemini15Flash([
     { role: 'system', content: `
@@ -107,11 +113,11 @@ export const answerProgram = async (pedestrianMessage) => {
 
 初始颜色为透明 (0, 0, 0)。
 `.trim() },
-    { role: 'user', content: lightFullText.trim() },
+    { role: 'user', content: lightDescription.trim() },
   ])
   // console.log(Deno.inspect(programResp, { depth: 99 }), Date.now() - t0)
-  console.log(programFullText, Date.now() - t0)
-  console.log('----')
+  console.log(programFullText)
+  console.log(Date.now() - t0)
   const code = (programFullText.match(/^```[^\n]+\n(.*?)(?<=\n)```\s*$/sm) || [])[1]
   console.log(code)
 

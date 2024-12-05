@@ -1,8 +1,20 @@
 import { speechRecognition } from './speech-recognition.js'
-import { answerProgram } from './answer.js'
+import { answerDescription, answerProgram } from './answer.js'
 import { evalProgram } from './eval_lua.js'
 
 const debug = !!Deno.env.get('DEBUG')
+
+const retry = async (fn, attempts, errorMsgPrefix) => {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return fn()
+    } catch (e) {
+      console.log(`${errorMsgPrefix}: ${e}`)
+      if (i === attempts - 1) throw e
+      continue
+    }
+  }
+}
 
 const serveReq = async (req) => {
   const url = new URL(req.url)
@@ -22,15 +34,19 @@ const serveReq = async (req) => {
       return new Response(e.message, { status: 500 })
     }
   } else if (req.method === 'POST' && url.pathname === '/message' && debug) {
-    const pedestrianMessage = await req.text()
-    while (true) {
-      const program = await answerProgram(pedestrianMessage)
-      const [lines, error] = await evalProgram(program)
-      if (error !== null) {
-        console.log(error)
-      } else {
-        return new Response(lines)
-      }
+    try {
+      const pedestrianMessage = await req.text()
+      const description = await retry(
+        async () => await answerDescription(pedestrianMessage),
+        3, 'Error fetching description')
+      const lines = await retry(
+        async () => await evalProgram(await answerProgram(description)),
+        3, 'Error making program'
+      )
+      return new Response(lines)
+    } catch (e) {
+      console.log(`Internal server error: ${e}`)
+      return new Response(e.message, { status: 500 })
     }
   }
   return new Response('Void space, please return', { status: 404 })

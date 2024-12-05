@@ -3,7 +3,6 @@ const luaFactory = new LuaFactory()
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x))
 
-// Returns [result, error]
 export const evalProgram = async (program) => {
   const l = await luaFactory.createEngine()
 
@@ -12,7 +11,7 @@ export const evalProgram = async (program) => {
   let [R, G, B] = [0, 0, 0]
 
   const line = (t, cmd, ...args) => {
-    if (t === 0) { return }
+    if (t === 0) { return '' }
     else if (t < 0) throw new Error('Negative duration')
     T += t
     return `${Math.floor(t)} ${cmd}${args.length > 0 ? ' ' : ''}${args.join(' ')}`
@@ -51,13 +50,12 @@ export const evalProgram = async (program) => {
     if (T >= 90000)
       throw new Error(`Total duration too long`)
   } catch (e) {
-    console.log(e)
-    return [null, e]
+    throw e
   } finally {
     l.global.close()
   }
 
-  return [s.join('\n'), null]
+  return s.join('\n')
 }
 
 // ======== Test run ======== //
