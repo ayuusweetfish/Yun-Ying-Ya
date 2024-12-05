@@ -1,23 +1,67 @@
 import { LuaFactory } from 'npm:wasmoon@1.16.0'
 const luaFactory = new LuaFactory()
 
-export const evalLua = async (program) => {
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x))
+
+// Returns [result, error]
+export const evalProgram = async (program) => {
   const l = await luaFactory.createEngine()
 
+  const s = []
+  let T = 0
+  let [R, G, B] = [0, 0, 0]
+
+  const line = (t, cmd, ...args) => {
+    if (t === 0) { return }
+    else if (t < 0) throw new Error('Negative duration')
+    T += t
+    return `${Math.floor(t)} ${cmd}${args.length > 0 ? ' ' : ''}${args.join(' ')}`
+  }
+  const tint = (r, g, b) => {
+    r = Math.round(clamp(r, 0, 1) * 1000)
+    g = Math.round(clamp(g, 0, 1) * 1000)
+    b = Math.round(clamp(b, 0, 1) * 1000)
+    return `${r} ${g} ${b}`
+  }
+
   try {
-    l.global.set('delay', (t) => console.log('delay', t))
-    l.global.set('fade', (r, g, b, t) => console.log('fade', r, g, b, t))
-    l.global.set('blink', (r, g, b, n, t1, t2) => console.log('blink', r, g, b, n, t1, t2))
-    l.global.set('breath', (r, g, b, n, t) => console.log('breath', r, g, b, n, t))
+    l.global.set('delay', (t) => {
+      s.push(line(t, 'D'))
+    })
+    l.global.set('fade', (r, g, b, t) => {
+      s.push(line(t, 'F', tint(r, g, b)))
+    })
+    l.global.set('blink', (r, g, b, n, t1, t2) => {
+      const ramp = Math.min(t1, t2) * 0.2
+      for (let i = 0; i < n; i++) {
+        s.push(line(ramp, 'F', tint(r, g, b)))
+        s.push(line(t1 - ramp, 'D'))
+        s.push(line(ramp, 'F', tint(R, G, B)))
+        s.push(line(t2 - ramp, 'D'))
+      }
+    })
+    l.global.set('breath', (r, g, b, n, t) => {
+      for (let i = 0; i < n; i++) {
+        s.push(line(t, 'B', tint(r, g, b)))
+      }
+    })
+
     await l.doString(program)
+
+    if (T >= 90000)
+      throw new Error(`Total duration too long`)
   } catch (e) {
     console.log(e)
+    return [null, e]
   } finally {
     l.global.close()
   }
+
+  return [s.join('\n'), null]
 }
 
-await evalLua(`
+if (0)
+console.log(await evalProgram(`
   -- Initial color is transparent (0, 0, 0)
 
   -- 小鸭身上的彩色小灯微微闪烁了一下
@@ -46,4 +90,4 @@ await evalLua(`
 
   -- 光芒持续了几秒后，逐渐减弱，最后以一个缓慢的淡出结束了回应，仿佛星星隐没在黎明的天际。
   fade(0, 0, 0, 3000) -- 缓慢淡出到黑色
-`)
+`))

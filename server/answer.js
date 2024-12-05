@@ -78,7 +78,7 @@ const requestLLM_Gemini15Flash = requestLLM_Google(
   Deno.env.get('API_KEY_GOOGLE') || prompt('API key (Google):')
 )
 
-const run = async (pedestrianMessage) => {
+export const answerProgram = async (pedestrianMessage) => {
   const t0 = Date.now()
 
   const [lightResp, lightFullText] = await requestLLM_YiLightning([
@@ -89,9 +89,9 @@ const run = async (pedestrianMessage) => {
 `.trim() },
     { role: 'user', content: pedestrianMessage },
   ])
-  console.log(Deno.inspect(lightResp, { depth: 99 }), Date.now() - t0)
+  // console.log(Deno.inspect(lightResp, { depth: 99 }), Date.now() - t0)
+  console.log(lightFullText, Date.now() - t0)
   console.log('----')
-  console.log(lightFullText)
 
   const [programResp, programFullText] = await requestLLM_Gemini15Flash([
     { role: 'system', content: `
@@ -109,11 +109,15 @@ const run = async (pedestrianMessage) => {
 `.trim() },
     { role: 'user', content: lightFullText.trim() },
   ])
-  console.log(Deno.inspect(programResp, { depth: 99 }), Date.now() - t0)
+  // console.log(Deno.inspect(programResp, { depth: 99 }), Date.now() - t0)
+  console.log(programFullText, Date.now() - t0)
   console.log('----')
   const code = (programFullText.match(/^```[^\n]+\n(.*?)(?<=\n)```\s*$/sm) || [])[1]
   console.log(code)
+
+  return code
 }
 
-// await run('小鸭小鸭，唱首歌吧！')
-await run('小鸭小鸭，星星是什么样子的？')
+if (0)
+// await answerProgram('小鸭小鸭，唱首歌吧！')
+await answerProgram('小鸭小鸭，星星是什么样子的？')
