@@ -33,11 +33,11 @@ void app_main(void)
   // Wi-Fi
 if (1) {
   wifi_init_sta();
-  led_set_state(1);
+  led_set_state(LED_STATE_CONN_CHECK, 500);
   int http_test_result = http_test();
   printf("HTTP test result: %d\n", http_test_result);
 }
-  led_set_state(2);
+  led_set_state(LED_STATE_IDLE, 500);
 
   // I2S input
   i2s_init();
@@ -87,6 +87,7 @@ if (1) {
     if (state == 0 && audio_wake_state() != 0) {
       printf("Wake-up word detected\n");
       state = STATE_SPEECH;
+      led_set_state(LED_STATE_SPEECH, 500);
       last_sent = 0;
       post_open(p);
     }
@@ -100,8 +101,18 @@ if (1) {
       }
       if (audio_speech_ended()) {
         state = STATE_IDLE;
+        led_set_state(LED_STATE_WAIT_RESPONSE, 1500);
         const char *s = post_finish(p);
         printf("Result: %s\n", s != NULL ? s : "(null)");
+        if (s != NULL) {
+          led_set_state(LED_STATE_RUN, 500);
+          vTaskDelay(2000 / portTICK_PERIOD_MS);
+          led_set_state(LED_STATE_IDLE, 2000);
+        } else {
+          led_set_state(LED_STATE_ERROR, 500);
+          vTaskDelay(2000 / portTICK_PERIOD_MS);
+          led_set_state(LED_STATE_IDLE, 500);
+        }
         audio_clear_wake_state();
       }
     }

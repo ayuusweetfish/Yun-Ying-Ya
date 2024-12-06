@@ -28,4 +28,12 @@ int audio_speech_buffer_size();
 bool audio_speech_ended();
 
 void led_init();
-void led_set_state(int state);
+enum led_state_t {
+  LED_STATE_IDLE,
+  LED_STATE_CONN_CHECK,
+  LED_STATE_SPEECH,
+  LED_STATE_WAIT_RESPONSE,
+  LED_STATE_RUN,
+  LED_STATE_ERROR,
+};
+void led_set_state(enum led_state_t state, int transition);

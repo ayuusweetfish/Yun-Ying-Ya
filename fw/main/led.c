@@ -2,6 +2,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "esp_log.h"
+#include <math.h>
 
 #define USE_LED_STRIP 1
 #define USE_LED_PWM   1
@@ -20,7 +21,8 @@ static led_strip_handle_t led_strip;
 #include "driver/gpio.h"
 #endif
 
-static inline void output_tint(int r, int g, int b);
+static inline void output_tint(float r, float g, float b);
+static void led_task_fn(void *_unused);
 
 void led_init()
 {
@@ -88,9 +90,11 @@ if (1) {
 #endif
 
   output_tint(0, 0, 0);
+  // High-priority
+  xTaskCreate(led_task_fn, "LED task", 4096, NULL, 8, NULL);
 }
 
-static inline void output_tint(int r, int g, int b)
+static inline void output_tint(float r, float g, float b)
 {
 #if USE_LED_STRIP
   led_strip_set_pixel(led_strip, 0, r, g, b);
@@ -99,23 +103,98 @@ static inline void output_tint(int r, int g, int b)
 
 #if USE_LED_PWM
 if (1) {
-  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, ((1 << 13) - 1) - (r << 5));
-  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, ((1 << 13) - 1) - (g << 5));
-  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, ((1 << 13) - 1) - (b << 5));
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (1 << 13) - (int)roundf(r * (1 << 13)));
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, (1 << 13) - (int)roundf(g * (1 << 13)));
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, (1 << 13) - (int)roundf(b * (1 << 13)));
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
 } else {
-  gpio_set_level(17, !(r >= 5));
-  gpio_set_level(18, !(g >= 5));
-  gpio_set_level(21, !(b >= 5));
+  gpio_set_level(17, !(r >= 0.5f));
+  gpio_set_level(18, !(g >= 0.5f));
+  gpio_set_level(21, !(b >= 0.5f));
 }
 #endif
 }
 
-void led_set_state(int state)
+static enum led_state_t cur_state = LED_STATE_IDLE;
+static int since = 0;
+
+static enum led_state_t last_state;
+static int transition_dur = 0;
+static int last_since_delta;
+
+void led_set_state(enum led_state_t state, int transition)
 {
-  if (state == 1) output_tint(2, 6, 10);
-  if (state == 2) output_tint(2, 2, 2);
-  if (state == 3) output_tint(10, 6, 2);
+  last_state = cur_state;
+  transition_dur = transition;
+  last_since_delta = since;
+
+  cur_state = state;
+  since = 0;
+}
+
+struct tint { float r, g, b; };
+
+static inline struct tint state_render(enum led_state_t state, int time)
+{
+  switch (state) {
+  case LED_STATE_IDLE:
+    return (struct tint){ 0, 0, 0 };
+
+  case LED_STATE_CONN_CHECK:
+    return (struct tint){ 0, 0, 1 };
+
+  case LED_STATE_SPEECH:
+    return (struct tint){ 1, 1, 1 };
+
+  case LED_STATE_WAIT_RESPONSE: {
+    float t = (float)time / 2000.0f * (float)(M_PI * 2);
+    float r = (sinf(t) + 1) / 2;
+    float g = (sinf(t + (float)(M_PI * 2 / 3)) + 1) / 2;
+    float b = (sinf(t + (float)(M_PI * 4 / 3)) + 1) / 2;
+    return (struct tint){ r, g, b };
+  }
+
+  case LED_STATE_RUN: {
+    // TODO
+    float t = (float)time / 1000.0f * (float)(M_PI * 2);
+    float x = (sinf(t) + 1) / 2;
+    return (struct tint){ x, x, 0 };
+  }
+
+  case LED_STATE_ERROR:
+    return (struct tint){ 1, 0.2f, 0 };
+
+  default:
+    return (struct tint){ 0, 0, 0 };
+  }
+}
+
+void led_task_fn(void *_unused)
+{
+  while (true) {
+    since += 10;
+    struct tint t = state_render(cur_state, since);
+    if (transition_dur > 0) {
+      if (since >= transition_dur) {
+        // Finish transition
+        transition_dur = 0;
+      } else {
+        // Fade
+        float progress = (float)since / transition_dur;
+        progress = (progress < 0.5 ?
+          progress * progress * 2 :
+          1 - (1 - progress) * (1 - progress) * 2);
+        struct tint t_last = state_render(last_state, since + last_since_delta);
+        t.r = t_last.r + (t.r - t_last.r) * progress;
+        t.g = t_last.g + (t.g - t_last.g) * progress;
+        t.b = t_last.b + (t.b - t_last.b) * progress;
+      }
+    }
+
+    output_tint(t.r, t.g, t.b);
+
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
 }
