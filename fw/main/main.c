@@ -6,6 +6,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "esp_chip_info.h"
+#include "esp_clk_tree.h"
 #include "esp_flash.h"
 #include "esp_log.h"
 #include "esp_pm.h"
@@ -50,9 +51,31 @@ if (1) {
   // `esp_pm/include/esp_pm.h`: Type is no longer implementation-specific
   ESP_ERROR_CHECK(esp_pm_configure(&(esp_pm_config_t){
     .max_freq_mhz = 240,
-    .min_freq_mhz =  80,
+    .min_freq_mhz =  10,
     .light_sleep_enable = true,
   }));
+
+  // 240 MHz / 80 MHz: 90-91 83-84; 40~60 mA
+  //  80 MHz / 10 MHz: 72-71 83-84; 40~60 mA (no observable current consumption drop) 
+  void idle_counter(void *_counter) {
+    _Atomic int *counter = _counter;
+    while (1) {
+      (*counter)++;
+      vTaskDelay(5);
+    }
+  }
+  void idle_counter_display(void *_counters) {
+    _Atomic int *counters = _counters;
+    while (1) {
+      vTaskDelay(500);
+      ESP_LOGI("idle counter", "%d %d", counters[0], counters[1]);
+      counters[0] = counters[1] = 0;
+    }
+  }
+  _Atomic int counter[2] = {0, 0};
+  xTaskCreatePinnedToCore(idle_counter, "idle_counter", 4096, &counter[0], 0, NULL, 0);
+  xTaskCreatePinnedToCore(idle_counter, "idle_counter", 4096, &counter[1], 0, NULL, 1);
+  xTaskCreate(idle_counter_display, "idle_counter_display", 4096, counter, 8, NULL);
 
   enum {
     STATE_IDLE,
@@ -115,4 +138,8 @@ void print_chip_info()
          (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
   printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
+
+  uint32_t cpu_freq;
+  ESP_ERROR_CHECK(esp_clk_tree_src_get_freq_hz(SOC_MOD_CLK_CPU, 0, &cpu_freq));
+  printf("CPU frequency: %" PRIu32 " Hz\n", cpu_freq);
 }
