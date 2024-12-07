@@ -1,6 +1,7 @@
 import { speechRecognition } from './speech-recognition.js'
 import { answerDescription, answerProgram } from './answer.js'
 import { evalProgram } from './eval_lua.js'
+import { logInteractionStart, logInteractionFill } from './log_db.js'
 
 const debug = !!Deno.env.get('DEBUG')
 
@@ -17,6 +18,7 @@ const retry = async (fn, attempts, errorMsgPrefix) => {
 }
 
 const serveReq = async (req) => {
+  const t0 = new Date()
   const url = new URL(req.url)
   if (req.method === 'POST' && url.pathname === '/') {
     console.log('connected!')
@@ -36,14 +38,20 @@ const serveReq = async (req) => {
   } else if (req.method === 'POST' && url.pathname === '/message' && debug) {
     try {
       const pedestrianMessage = await req.text()
+      const logId = await logInteractionStart(t0.getTime(), null, pedestrianMessage)
       const description = await retry(
         async () => await answerDescription(pedestrianMessage),
         3, 'Error fetching description')
-      const lines = await retry(
-        async () => await evalProgram(await answerProgram(description)),
+      const [program, assembly] = await retry(
+        async () => {
+          const program = await answerProgram(description)
+          const assembly = await evalProgram(program)
+          return [program, assembly]
+        },
         3, 'Error making program'
       )
-      return new Response(lines)
+      await logInteractionFill(logId, description, program, assembly)
+      return new Response(assembly)
     } catch (e) {
       console.log(`Internal server error: ${e}`)
       return new Response(e.message, { status: 500 })

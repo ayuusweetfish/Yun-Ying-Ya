@@ -1,5 +1,15 @@
+import { logNetwork } from './log_db.js'
+
+const loggedFetchJSON = async (url, options) => {
+  const t0 = Date.now()
+  const req = await fetch(url, options)
+  const respText = await req.text()
+  await logNetwork(url, options.body, respText, Date.now() - t0)
+  return JSON.parse(respText)
+}
+
 const requestLLM_OpenAI = (endpoint, model, temperature, key) => async (messages) => {
-  const req = await fetch(
+  const resp = await loggedFetchJSON(
     endpoint,
     {
       method: 'POST',
@@ -15,7 +25,6 @@ const requestLLM_OpenAI = (endpoint, model, temperature, key) => async (messages
       }),
     }
   )
-  const resp = await req.json()
 
   // Extract text
   if (!(resp.choices instanceof Array) ||
@@ -32,7 +41,7 @@ const requestLLM_OpenAI = (endpoint, model, temperature, key) => async (messages
 
 const requestLLM_Google = (model, temperature, key) => async (messages) => {
   // Ref: https://ai.google.dev/api/generate-content#v1beta.models.generateContent
-  const req = await fetch(
+  const resp = await loggedFetchJSON(
     'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key,
     {
       method: 'POST',
@@ -56,7 +65,6 @@ const requestLLM_Google = (model, temperature, key) => async (messages) => {
       }),
     }
   )
-  const resp = await req.json()
 
   // Extract text
   const { candidates } = resp
@@ -79,8 +87,6 @@ const requestLLM_Gemini15Flash = requestLLM_Google(
 )
 
 export const answerDescription = async (pedestrianMessage) => {
-  const t0 = Date.now()
-
   const [lightResp, lightDescription] = await requestLLM_YiLightning([
     { role: 'system', content: `
 雪地里有一只由雪堆成的小鸭子。小鸭不会说话，但它的身体里有一个彩色小灯，小鸭以灯光的颜色回应行人；乘着自由的想象，它觉得变化的色彩也许能承载世间的一切。
@@ -89,16 +95,11 @@ export const answerDescription = async (pedestrianMessage) => {
 `.trim() },
     { role: 'user', content: pedestrianMessage },
   ])
-  // console.log(Deno.inspect(lightResp, { depth: 99 }), Date.now() - t0)
-  console.log(lightDescription)
-  console.log(Date.now() - t0)
 
   return lightDescription
 }
 
 export const answerProgram = async (lightDescription) => {
-  const t0 = Date.now()
-
   const [programResp, programFullText] = await requestLLM_Gemini15Flash([
     { role: 'system', content: `
 请你按照给出的描述为一盏小灯编写动画效果。
@@ -116,9 +117,6 @@ export const answerProgram = async (lightDescription) => {
 `.trim() },
     { role: 'user', content: lightDescription.trim() },
   ])
-  // console.log(Deno.inspect(programResp, { depth: 99 }), Date.now() - t0)
-  console.log(programFullText)
-  console.log(Date.now() - t0)
 
   const codeSegments = [
     ...
