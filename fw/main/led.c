@@ -75,7 +75,7 @@ if (1) {
       .timer_sel = LEDC_TIMER_0,
       .intr_type = LEDC_INTR_DISABLE,
       .gpio_num = channels[i].pin,
-      .duty = 0,
+      .duty = (1 << 13),
       .hpoint = 0,
     }));
 } else {

@@ -10,6 +10,7 @@
 #include "esp_flash.h"
 #include "esp_log.h"
 #include "esp_pm.h"
+#include "esp_sleep.h"
 #include "nvs_flash.h"
 
 #define TAG "main"
@@ -38,6 +39,25 @@ if (1) {
   printf("HTTP test result: %d\n", http_test_result);
 }
   led_set_state(LED_STATE_IDLE, 500);
+
+  // `esp_pm/include/esp_pm.h`: Type is no longer implementation-specific
+  ESP_ERROR_CHECK(esp_pm_configure(&(esp_pm_config_t){
+    .max_freq_mhz = 240,
+    .min_freq_mhz =  10,
+    .light_sleep_enable = true,
+  }));
+
+  while (0) {
+    led_set_state(LED_STATE_WAIT_RESPONSE, 1000);
+    int http_test_result = http_test();
+    printf("HTTP test result: %d\n", http_test_result);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+    led_set_state(LED_STATE_IDLE, 1000);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    esp_light_sleep_start();
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
+    esp_deep_sleep_start();
+  }
 
   // I2S input
   i2s_init();
