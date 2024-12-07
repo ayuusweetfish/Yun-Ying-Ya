@@ -2,6 +2,7 @@ import { speechRecognition } from './speech-recognition.js'
 import { answerDescription, answerProgram } from './answer.js'
 import { evalProgram } from './eval_lua.js'
 import { logInteractionStart, logInteractionFill } from './log_db.js'
+import { Buffer } from 'node:buffer'
 
 const debug = !!Deno.env.get('DEBUG')
 
@@ -17,59 +18,53 @@ const retry = async (fn, attempts, errorMsgPrefix) => {
   }
 }
 
+const answerAssembly = async (t0, audio, pedestrianMessage) => {
+  const logId = await logInteractionStart(t0.getTime(), audio, pedestrianMessage)
+  const description = await retry(
+    async () => await answerDescription(pedestrianMessage),
+    3, 'Error fetching description')
+  const [program, assembly] = await retry(
+    async () => {
+      const program = await answerProgram(description)
+      const assembly = await evalProgram(program)
+      return [program, assembly]
+    },
+    3, 'Error making program'
+  )
+  await logInteractionFill(logId, description, program, assembly)
+  return assembly
+}
+
 const serveReq = async (req) => {
   const t0 = new Date()
   const url = new URL(req.url)
   if (req.method === 'POST' && url.pathname === '/') {
     console.log('connected!')
     const sr = await speechRecognition()
+    const audioBlocks = []  // Uint8Array[]
     try {
-      for await (const value of req.body) sr.push(value)
+      for await (const value of req.body) {
+        sr.push(value)
+        audioBlocks.push(value)
+      }
     } catch (e) {
       console.log(`Error reading response: ${e.message}`)
     }
+    const combinedAudio = new Uint8Array(Buffer.concat(audioBlocks))
     try {
       const s = await sr.end()
-      console.log(`returning response "${s}"`)
-      // return new Response(s)
-      return new Response(`
-40 F 800 800 200
-160 D
-40 F 0 0 0
-460 D
-3000 F 200 500 800
-3000 F 0 100 400
-2500 B 1000 1000 1000
-2500 B 1000 1000 1000
-2500 B 1000 1000 1000
-2500 B 1000 1000 1000
-2500 B 1000 1000 1000
-3000 F 200 300 500
-2000 B 1000 800 200
-2000 B 1000 800 200
-2000 B 1000 800 200
-3000 F 0 0 0
-`
-      )
+      console.log(`message "${s}"`)
+      const pedestrianMessage = s ? `小鸭小鸭，${s}` : '小鸭小鸭，你好你好！'
+      const assembly = await answerAssembly(t0, combinedAudio, pedestrianMessage)
+      return new Response(assembly)
     } catch (e) {
+      console.log(`Internal server error: ${e}`)
       return new Response(e.message, { status: 500 })
     }
   } else if (req.method === 'POST' && url.pathname === '/message' && debug) {
     try {
       const pedestrianMessage = await req.text()
-      const logId = await logInteractionStart(t0.getTime(), null, pedestrianMessage)
-      const description = await retry(
-        async () => await answerDescription(pedestrianMessage),
-        3, 'Error fetching description')
-      const [program, assembly] = await retry(
-        async () => {
-          const program = await answerProgram(description)
-          const assembly = await evalProgram(program)
-          return [program, assembly]
-        },
-        3, 'Error making program'
-      )
-      await logInteractionFill(logId, description, program, assembly)
+      const assembly = await answerAssembly(t0, null, pedestrianMessage)
       return new Response(assembly)
     } catch (e) {
       console.log(`Internal server error: ${e}`)
