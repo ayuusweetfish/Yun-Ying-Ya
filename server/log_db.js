@@ -44,3 +44,10 @@ const stmtLogInteractionFill = db.prepare(`
 export const logInteractionFill = async (rowid, description, program, assembly) => {
   stmtLogInteractionFill.run(description, program, assembly, rowid)
 }
+
+/*
+  To extract audio recordings:
+
+  sqlite3 log.db "SELECT writefile(timestamp || '.pcm', audio) FROM interactions WHERE length(audio) > 0"
+  for i in [0-9]*.pcm; do ffmpeg -ar 16000 -f s16le -acodec pcm_s16le -i $i ${i%.pcm}.wav && rm $i; done
+*/
