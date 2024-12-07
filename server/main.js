@@ -31,7 +31,26 @@ const serveReq = async (req) => {
     try {
       const s = await sr.end()
       console.log(`returning response "${s}"`)
-      return new Response(s)
+      // return new Response(s)
+      return new Response(`
+40 F 800 800 200
+160 D
+40 F 0 0 0
+460 D
+3000 F 200 500 800
+3000 F 0 100 400
+2500 B 1000 1000 1000
+2500 B 1000 1000 1000
+2500 B 1000 1000 1000
+2500 B 1000 1000 1000
+2500 B 1000 1000 1000
+3000 F 200 300 500
+2000 B 1000 800 200
+2000 B 1000 800 200
+2000 B 1000 800 200
+3000 F 0 0 0
+`
+      )
     } catch (e) {
       return new Response(e.message, { status: 500 })
     }

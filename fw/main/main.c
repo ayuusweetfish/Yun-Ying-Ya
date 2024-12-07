@@ -124,9 +124,9 @@ if (1) {
         led_set_state(LED_STATE_WAIT_RESPONSE, 1500);
         const char *s = post_finish(p);
         printf("Result: %s\n", s != NULL ? s : "(null)");
-        if (s != NULL) {
+        if (s != NULL && led_set_program(s)) {
           led_set_state(LED_STATE_RUN, 500);
-          vTaskDelay(2000 / portTICK_PERIOD_MS);
+          vTaskDelay(35000 / portTICK_PERIOD_MS);
           led_set_state(LED_STATE_IDLE, 2000);
         } else {
           led_set_state(LED_STATE_ERROR, 500);
