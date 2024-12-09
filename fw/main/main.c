@@ -47,49 +47,6 @@ if (1) {
     .light_sleep_enable = true,
   }));
 
-  // Causes panics during lock acquisition inside `printf()` & co.
-  esp_err_t enter_cb(int64_t sleep_time_us, void *arg) {
-    ESP_LOGI("1", "Enter sleep: %" PRId64 "\n", sleep_time_us);
-    return ESP_OK;
-  }
-  esp_err_t exit_cb(int64_t sleep_time_us, void *arg) {
-    ESP_LOGI("1", "Exit sleep: %" PRId64 "\n", sleep_time_us);
-    return ESP_OK;
-  }
-  if (0) esp_pm_light_sleep_register_cbs(&(esp_pm_sleep_cbs_register_config_t){
-    .enter_cb = enter_cb,
-    .exit_cb = exit_cb,
-  });
-
-  while (0) {
-    esp_pm_dump_locks(stdout);
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
-    // esp_light_sleep_start();
-  }
-  while (1) {
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
-    led_set_state(LED_STATE_CONN_CHECK, 500);
-    if (1) {
-      int http_test_result = http_test();
-      printf("HTTP test result: %d\n", http_test_result);
-    } else {
-      vTaskDelay(3000 / portTICK_PERIOD_MS);
-    }
-    led_set_state(LED_STATE_IDLE, 500);
-  }
-
-  while (1) {
-    led_set_state(LED_STATE_WAIT_RESPONSE, 1000);
-    int http_test_result = http_test();
-    printf("HTTP test result: %d\n", http_test_result);
-    vTaskDelay(4000 / portTICK_PERIOD_MS);
-    led_set_state(LED_STATE_IDLE, 500);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    esp_light_sleep_start();
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
-    esp_deep_sleep_start();
-  }
-
   // I2S input
   i2s_init();
 
@@ -105,28 +62,6 @@ if (1) {
     .min_freq_mhz =  10,
     .light_sleep_enable = true,
   }));
-
-  // 240 MHz / 80 MHz: 90-91 83-84; 40~60 mA
-  //  80 MHz / 10 MHz: 72-71 83-84; 40~60 mA (no observable current consumption drop) 
-  void idle_counter(void *_counter) {
-    _Atomic int *counter = _counter;
-    while (1) {
-      (*counter)++;
-      vTaskDelay(5);
-    }
-  }
-  void idle_counter_display(void *_counters) {
-    _Atomic int *counters = _counters;
-    while (1) {
-      vTaskDelay(500);
-      ESP_LOGI("idle counter", "%d %d", counters[0], counters[1]);
-      counters[0] = counters[1] = 0;
-    }
-  }
-  _Atomic int counter[2] = {0, 0};
-  xTaskCreatePinnedToCore(idle_counter, "idle_counter", 4096, &counter[0], 0, NULL, 0);
-  xTaskCreatePinnedToCore(idle_counter, "idle_counter", 4096, &counter[1], 0, NULL, 1);
-  xTaskCreate(idle_counter_display, "idle_counter_display", 4096, counter, 8, NULL);
 
   enum {
     STATE_IDLE,
