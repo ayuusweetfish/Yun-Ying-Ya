@@ -4,7 +4,7 @@
 #include "esp_log.h"
 #include <math.h>
 
-#define USE_LED_STRIP 1
+#define USE_LED_STRIP 0
 #define USE_LED_PWM   1
 
 static const char *TAG = "LED";
@@ -284,7 +284,7 @@ static inline struct tint state_render(enum led_state_t state, int time)
 {
   switch (state) {
   case LED_STATE_IDLE:
-    return (struct tint){ 0, 0, 0 };
+    return (struct tint){ 1, 0, 0 };
 
   case LED_STATE_CONN_CHECK:
     return (struct tint){ 0, 0, 1 };
@@ -316,7 +316,7 @@ static inline struct tint state_render(enum led_state_t state, int time)
 void led_task_fn(void *_unused)
 {
   while (true) {
-    since += 10;
+    since += 500;
     struct tint t = state_render(cur_state, since);
     if (transition_dur > 0) {
       if (since >= transition_dur) {
@@ -337,7 +337,7 @@ void led_task_fn(void *_unused)
 
     output_tint(t.r, t.g, t.b);
 
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
 

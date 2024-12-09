@@ -145,6 +145,8 @@ void wifi_init_sta(void)
       .sae_pwe_h2e = ESP_WIFI_SAE_MODE,
       .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
     #endif
+
+      .listen_interval = 10,
     },
   };
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
@@ -158,7 +160,8 @@ void wifi_init_sta(void)
   ESP_ERROR_CHECK(esp_wifi_sta_enterprise_enable());
 #endif
 
-  ESP_ERROR_CHECK(esp_wifi_start() );
+  ESP_ERROR_CHECK(esp_wifi_start());
+  ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
 
   ESP_LOGI(TAG, "wifi_init_sta finished.");
 

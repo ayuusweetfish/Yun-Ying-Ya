@@ -47,15 +47,46 @@ if (1) {
     .light_sleep_enable = true,
   }));
 
+  // Causes panics during lock acquisition inside `printf()` & co.
+  esp_err_t enter_cb(int64_t sleep_time_us, void *arg) {
+    ESP_LOGI("1", "Enter sleep: %" PRId64 "\n", sleep_time_us);
+    return ESP_OK;
+  }
+  esp_err_t exit_cb(int64_t sleep_time_us, void *arg) {
+    ESP_LOGI("1", "Exit sleep: %" PRId64 "\n", sleep_time_us);
+    return ESP_OK;
+  }
+  if (0) esp_pm_light_sleep_register_cbs(&(esp_pm_sleep_cbs_register_config_t){
+    .enter_cb = enter_cb,
+    .exit_cb = exit_cb,
+  });
+
   while (0) {
+    esp_pm_dump_locks(stdout);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    // esp_light_sleep_start();
+  }
+  while (1) {
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    led_set_state(LED_STATE_CONN_CHECK, 500);
+    if (1) {
+      int http_test_result = http_test();
+      printf("HTTP test result: %d\n", http_test_result);
+    } else {
+      vTaskDelay(3000 / portTICK_PERIOD_MS);
+    }
+    led_set_state(LED_STATE_IDLE, 500);
+  }
+
+  while (1) {
     led_set_state(LED_STATE_WAIT_RESPONSE, 1000);
     int http_test_result = http_test();
     printf("HTTP test result: %d\n", http_test_result);
     vTaskDelay(4000 / portTICK_PERIOD_MS);
-    led_set_state(LED_STATE_IDLE, 1000);
+    led_set_state(LED_STATE_IDLE, 500);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     esp_light_sleep_start();
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
     esp_deep_sleep_start();
   }
 
