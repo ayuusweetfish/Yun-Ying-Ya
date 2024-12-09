@@ -21,15 +21,18 @@ local load_duck = function (s)
     output = output,
   }
   local f, e = load(s .. '\nreturn light', 'duck')
+  -- local f, e = load(s, 'duck')
   if e then print(e) end
   local f = setfenv(f, fenv)
   return f()
+  -- return f
 end
 
 local duck_fn = load_duck(io.popen('pbpaste'):read('a'))
 local co_duck = coroutine.create(function ()
   while true do duck_fn() end
 end)
+-- local co_duck = coroutine.create(duck_fn)
 
 local T = 0
 local t0, r0, g0, b0 = 0, 0, 0, 0
@@ -42,7 +45,7 @@ function love.update(dt)
     local result
     result, t1, r1, g1, b1 = coroutine.resume(co_duck)
     if not result then
-      print('Error')
+      print('Error', t1)
       break
     else
       print(t1, r1, g1, b1)
