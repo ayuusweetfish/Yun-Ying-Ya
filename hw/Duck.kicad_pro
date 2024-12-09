@@ -414,7 +414,8 @@
     "pinned_symbol_libs": [
       "Espressif",
       "INMP441",
-      "CH343"
+      "CH343",
+      "PY32F003"
     ]
   },
   "meta": {

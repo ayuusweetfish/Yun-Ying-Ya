@@ -4,4 +4,5 @@
   (lib (name "INMP441")(type "KiCad")(uri "${KIPRJMOD}/libs/INMP441/INMP441.kicad_sym")(options "")(descr ""))
   (lib (name "MAX17048G+T10")(type "KiCad")(uri "${KIPRJMOD}/libs/MAX17048G+T10/MAX17048G+T10.kicad_sym")(options "")(descr ""))
   (lib (name "CH343")(type "KiCad")(uri "${KIPRJMOD}/libs/CH343/CH343.kicad_sym")(options "")(descr ""))
+  (lib (name "PY32F003")(type "KiCad")(uri "${KIPRJMOD}/libs/PY32F003/PY32F003.kicad_sym")(options "")(descr ""))
 )
