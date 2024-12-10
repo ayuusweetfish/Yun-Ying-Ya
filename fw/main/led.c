@@ -19,6 +19,7 @@ static led_strip_handle_t led_strip;
 #if USE_LED_PWM
 #include "driver/ledc.h"
 #include "driver/gpio.h"
+#include "esp_sleep.h"
 #endif
 
 static inline void output_tint(float r, float g, float b);
@@ -58,10 +59,10 @@ void led_init()
 if (1) {
   ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
-    .duty_resolution = LEDC_TIMER_13_BIT,
+    .duty_resolution = LEDC_TIMER_11_BIT,
     .timer_num = LEDC_TIMER_0,
-    .freq_hz = 4000,
-    .clk_cfg = LEDC_AUTO_CLK,
+    .freq_hz = 8000,
+    .clk_cfg = LEDC_USE_RC_FAST_CLK,
   }));
   static const struct { ledc_channel_t ch; int pin; } channels[3] = {
     {LEDC_CHANNEL_0, 17},
@@ -75,7 +76,7 @@ if (1) {
       .timer_sel = LEDC_TIMER_0,
       .intr_type = LEDC_INTR_DISABLE,
       .gpio_num = channels[i].pin,
-      .duty = (1 << 13),
+      .duty = (1 << 11),
       .hpoint = 0,
     }));
 } else {
@@ -85,6 +86,11 @@ if (1) {
     .pull_up_en = GPIO_PULLUP_ENABLE,
   });
 }
+
+  ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_RC_FAST, ESP_PD_OPTION_ON));
+  ESP_ERROR_CHECK(gpio_sleep_sel_dis(17));
+  ESP_ERROR_CHECK(gpio_sleep_sel_dis(18));
+  ESP_ERROR_CHECK(gpio_sleep_sel_dis(21));
 
   ESP_LOGI(TAG, "Initialised LED with PWM controller");
 #endif
@@ -103,9 +109,9 @@ static inline void output_tint(float r, float g, float b)
 
 #if USE_LED_PWM
 if (1) {
-  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (1 << 13) - (int)roundf(r * (1 << 13)));
-  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, (1 << 13) - (int)roundf(g * (1 << 13)));
-  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, (1 << 13) - (int)roundf(b * (1 << 13)));
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (1 << 11) - (int)roundf(r * (1 << 11)));
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, (1 << 11) - (int)roundf(g * (1 << 11)));
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, (1 << 11) - (int)roundf(b * (1 << 11)));
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);

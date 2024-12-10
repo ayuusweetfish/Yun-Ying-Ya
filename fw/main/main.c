@@ -47,6 +47,14 @@ if (1) {
     .light_sleep_enable = true,
   }));
 
+  while (1) {
+    vTaskDelay(15000 / portTICK_PERIOD_MS);
+    led_set_state(LED_STATE_CONN_CHECK, 500);
+    int http_test_result = http_test();
+    printf("HTTP test result: %d\n", http_test_result);
+    led_set_state(LED_STATE_IDLE, 500);
+  }
+
   // I2S input
   i2s_init();
 
@@ -55,13 +63,6 @@ if (1) {
 
   // Streaming POST request handle
   post_handle_t *p = post_create();
-
-  // `esp_pm/include/esp_pm.h`: Type is no longer implementation-specific
-  ESP_ERROR_CHECK(esp_pm_configure(&(esp_pm_config_t){
-    .max_freq_mhz = 240,
-    .min_freq_mhz =  10,
-    .light_sleep_enable = true,
-  }));
 
   enum {
     STATE_IDLE,
