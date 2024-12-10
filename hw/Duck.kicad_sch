@@ -2154,7 +2154,6 @@
   (no_connect (at 76.2 97.79) (uuid 2c54e5b2-cc26-4ebb-a832-b5567d02a173))
   (no_connect (at 128.27 60.96) (uuid 35eedaf6-0e52-431b-ad6e-5055c7a4bfcd))
   (no_connect (at 226.06 138.43) (uuid 36a38359-aa90-48b7-acac-33b7195c882f))
-  (no_connect (at 65.405 116.205) (uuid 37c67c24-4c5d-49fe-9e83-69a625755245))
   (no_connect (at 168.91 38.1) (uuid 394d4c07-e33d-4fe6-84da-f4717b1de527))
   (no_connect (at 186.69 50.8) (uuid 3d8569d7-69aa-4940-bfa1-8d57e3318f66))
   (no_connect (at 128.27 71.12) (uuid 3de266b7-7e3d-4bc3-889e-6d465ae3144b))
@@ -4846,6 +4845,31 @@
       (project "Duck"
         (path "/23349607-acbb-4aa4-80bb-d6050790beec"
           (reference "R10") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "power:GND") (at 65.405 116.205 270) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid b7596e11-ddae-4edb-b961-da3ec41eeb4a)
+    (property "Reference" "#PWR020" (at 59.055 116.205 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 60.96 116.205 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Footprint" "" (at 65.405 116.205 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 65.405 116.205 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 274caf6f-480e-45d8-a902-ffc18a638bea))
+    (instances
+      (project "Duck"
+        (path "/23349607-acbb-4aa4-80bb-d6050790beec"
+          (reference "#PWR020") (unit 1)
         )
       )
     )
