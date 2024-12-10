@@ -12,6 +12,8 @@
 #include "esp_pm.h"
 #include "esp_sleep.h"
 #include "nvs_flash.h"
+#include "ulp_riscv.h"
+#include "driver/rtc_io.h"
 
 #define TAG "main"
 
@@ -39,6 +41,16 @@ if (1) {
   printf("HTTP test result: %d\n", http_test_result);
 }
   led_set_state(LED_STATE_IDLE, 500);
+
+  rtc_gpio_init(GPIO_NUM_9);
+  rtc_gpio_set_direction(GPIO_NUM_9, RTC_GPIO_MODE_OUTPUT_ONLY);
+  rtc_gpio_set_direction_in_sleep(GPIO_NUM_9, RTC_GPIO_MODE_OUTPUT_ONLY);
+  rtc_gpio_pullup_dis(GPIO_NUM_9);
+  rtc_gpio_pulldown_dis(GPIO_NUM_9);
+  extern const uint8_t bin_start[] asm("_binary_ulp_duck_bin_start");
+  extern const uint8_t bin_end[]   asm("_binary_ulp_duck_bin_end");
+  ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
+  ESP_ERROR_CHECK(ulp_riscv_run());
 
   // `esp_pm/include/esp_pm.h`: Type is no longer implementation-specific
   ESP_ERROR_CHECK(esp_pm_configure(&(esp_pm_config_t){

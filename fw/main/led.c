@@ -62,7 +62,7 @@ if (1) {
     .duty_resolution = LEDC_TIMER_11_BIT,
     .timer_num = LEDC_TIMER_0,
     .freq_hz = 8000,
-    .clk_cfg = LEDC_USE_RC_FAST_CLK,
+    .clk_cfg = LEDC_USE_XTAL_CLK,
   }));
   static const struct { ledc_channel_t ch; int pin; } channels[3] = {
     {LEDC_CHANNEL_0, 17},
@@ -79,6 +79,21 @@ if (1) {
       .duty = (1 << 11),
       .hpoint = 0,
     }));
+
+  ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .duty_resolution = LEDC_TIMER_2_BIT,
+    .timer_num = LEDC_TIMER_1,
+    .freq_hz = 1024000,
+    .clk_cfg = LEDC_USE_XTAL_CLK,
+  }));
+  ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_3,
+    .timer_sel = LEDC_TIMER_1,
+    .gpio_num = 8,
+    .duty = 0b10,
+  }));
 } else {
   gpio_config(&(gpio_config_t){
     .pin_bit_mask = (1 << 17) | (1 << 18) | (1 << 21),
@@ -87,10 +102,11 @@ if (1) {
   });
 }
 
-  ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_RC_FAST, ESP_PD_OPTION_ON));
+  ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_ON));
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(17));
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(18));
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(21));
+  ESP_ERROR_CHECK(gpio_sleep_sel_dis(8));
 
   ESP_LOGI(TAG, "Initialised LED with PWM controller");
 #endif
