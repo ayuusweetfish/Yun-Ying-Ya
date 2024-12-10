@@ -115,6 +115,8 @@ void audio_task(void *_unused)
         );
         memcpy(speech_buffer + speech_buffer_ptr, fetch_result->data, copy_count * sizeof(int16_t));
         speech_buffer_ptr += copy_count;
+        if (copy_count > 0 && audio_speech_ended())
+          led_set_state(LED_STATE_WAIT_RESPONSE, 1500);
       }
     }
   }

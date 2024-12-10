@@ -59,7 +59,7 @@ if (1) {
     .light_sleep_enable = true,
   }));
 
-  while (1) {
+  while (0) {
     vTaskDelay(15000 / portTICK_PERIOD_MS);
     led_set_state(LED_STATE_CONN_CHECK, 500);
     int http_test_result = http_test();
@@ -100,7 +100,6 @@ if (1) {
       }
       if (audio_speech_ended()) {
         state = STATE_IDLE;
-        led_set_state(LED_STATE_WAIT_RESPONSE, 1500);
         const char *s = post_finish(p);
         printf("Result: %s\n", s != NULL ? s : "(null)");
         if (s != NULL && led_set_program(s)) {
