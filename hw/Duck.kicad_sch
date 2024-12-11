@@ -1821,7 +1821,6 @@
   (no_connect (at 214.63 83.185) (uuid 5bb46750-2720-405c-81c2-85fed9cf4401))
   (no_connect (at 83.82 76.835) (uuid 6172971b-6ea2-4fd6-8aad-6101823ec749))
   (no_connect (at 234.95 108.585) (uuid 6cb6634f-4a82-4b38-ba5b-bb0c8fae74df))
-  (no_connect (at 224.79 29.845) (uuid 6d8c9c4c-1850-463f-a360-a02b34d6ec7e))
   (no_connect (at 232.41 29.845) (uuid 7a787514-e8e1-49c6-ad07-2aac362ede4f))
   (no_connect (at 201.93 83.185) (uuid 7ad2031c-c016-4041-a4b0-b0f93446bfd4))
   (no_connect (at 209.55 29.845) (uuid 8c7fbf00-fecb-4007-9e4b-8e7a0bcf686b))
@@ -3276,6 +3275,31 @@
       (project "Duck"
         (path "/23349607-acbb-4aa4-80bb-d6050790beec"
           (reference "#PWR027") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "power:+3V3") (at 224.79 29.845 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 532096ab-3ddb-444d-a616-42f2576d79f1)
+    (property "Reference" "#PWR043" (at 224.79 33.655 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "+3V3" (at 224.79 25.4 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 224.79 29.845 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 224.79 29.845 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 9af128f3-9ee9-484d-a25e-7d144240e468))
+    (instances
+      (project "Duck"
+        (path "/23349607-acbb-4aa4-80bb-d6050790beec"
+          (reference "#PWR043") (unit 1)
         )
       )
     )
