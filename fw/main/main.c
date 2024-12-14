@@ -26,6 +26,13 @@ void app_main(void)
   led_init();
   led_set_state(LED_STATE_STARTUP, 500);
 
+  // `esp_pm/include/esp_pm.h`: Type is no longer implementation-specific
+  ESP_ERROR_CHECK(esp_pm_configure(&(esp_pm_config_t){
+    .max_freq_mhz = 160,
+    .min_freq_mhz =  10,
+    .light_sleep_enable = true,
+  }));
+
   // NVS
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -52,13 +59,6 @@ if (1) {
   extern const uint8_t bin_end[]   asm("_binary_ulp_duck_bin_end");
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
-
-  // `esp_pm/include/esp_pm.h`: Type is no longer implementation-specific
-  ESP_ERROR_CHECK(esp_pm_configure(&(esp_pm_config_t){
-    .max_freq_mhz = 160,
-    .min_freq_mhz =  10,
-    .light_sleep_enable = true,
-  }));
 
   while (1) {
     vTaskDelay(15000 / portTICK_PERIOD_MS);

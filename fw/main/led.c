@@ -27,6 +27,7 @@ static void led_task_fn(void *_unused);
 
 static TaskHandle_t led_task_handle;
 static SemaphoreHandle_t led_mutex;
+static SemaphoreHandle_t led_sleep_signal;
 
 void led_init()
 {
@@ -116,8 +117,11 @@ if (1) {
 
   output_tint(0, 0, 0);
 
+  // See "Rationale and analysis for concurrency" below.
   // Create lock
   led_mutex = xSemaphoreCreateMutex();
+  assert(led_mutex != NULL);
+  led_sleep_signal = xSemaphoreCreateBinary();
   assert(led_mutex != NULL);
   // High-priority
   xTaskCreate(led_task_fn, "LED task", 4096, NULL, 8, &led_task_handle);
@@ -300,7 +304,7 @@ static int transition_dur = 0;
 static int last_since_delta;
 
 /*
-Rationale for the locks.
+Rationale and analysis for concurrency.
 
 Step 1.
 In addition to the mutex covering state data (state and program),
@@ -316,12 +320,31 @@ activated less frequently due to `ulTaskNotifyTake()` blocking not being treated
 as a completely inactive thread (suspectedly due to the timeout, although it's
 set to `portMAX_DELAY`).
 
-Thus we use a semaphore combined with an additional `vTaskSuspend()`.
-This will not affect the behaviour, but marks the task as completely suspended
-to the scheduler, avoiding light-sleep interrupts during prolonged idle periods.
+REMOVED
+  Thus we assign a higher priority to the update task so that it will not be
+  preempted by the main task. This eliminates the original race condition, and
+  marks the task as completely suspended to the scheduler, avoiding interrupts in
+  light-sleep during prolonged idle periods.
 
-TODO: In this commit, the `vTaskSuspend()` has not been added,
-thus the behaviour is correct but current consumption is higher than necessary.
+  In addition, the core affinity of the update task is set to the same as that of
+  the main task. Otherwise, the two tasks can still run concurrently, which we'd
+  like to avoid.
+
+We currently use `xSemaphoreTake()`, which correctly puts the task to
+suspended state. FreeRTOS documentation also mentions this behaviour;
+this is not present in `ulTaskNotifyTake()`, though the following source trace
+points to it being equivalent.
+
+The ammeter is broken, let's delay the measurement for later T-T
+
+Ref (in esp-idf/components/freertos/FreeRTOS-Kernel):
+  include/freertos/semphr.h: xSemaphoreTake()
+  queue.c: xQueueSemaphoreTake()
+  tasks.c: vTaskPlaceOnEventList()
+  tasks.c: prvAddCurrentTaskToDelayedList()
+
+  include/freertos/task.h: ulTaskNotifyTake()
+  tasks.c: ulTaskGenericNotifyTake()
 */
 
 void led_set_state(enum led_state_t state, int transition)
@@ -336,8 +359,8 @@ void led_set_state(enum led_state_t state, int transition)
   since = 0;
 
   xSemaphoreGive(led_mutex);
-  // xTaskNotifyGive(led_task_handle);
-  vTaskResume(led_task_handle);
+  // vTaskResume(led_task_handle);
+  xSemaphoreGive(led_sleep_signal);
 }
 
 static inline struct tint state_render(enum led_state_t state, int time)
@@ -408,8 +431,8 @@ void led_task_fn(void *_unused)
     output_tint(t.r, t.g, t.b);
 
     if (suspend_task) {
-      vTaskSuspend(led_task_handle);
-      // ulTaskNotifyTake(pdTRUE /* binary semaphore */, portMAX_DELAY);
+      // vTaskSuspend(led_task_handle);
+      xSemaphoreTake(led_sleep_signal, portMAX_DELAY);
     }
     vTaskDelay(INTERVAL / portTICK_PERIOD_MS);
   }
