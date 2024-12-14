@@ -67,8 +67,9 @@ if (1) {
 
   esp_err_t exit_cb(int64_t sleep_time_us, void *arg)
   {
-    // Sometimes misses!
-    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_ULP) {
+    // XXX: Can we use semaphores?
+    if (ulp_wakeup_signal != 0) {
+      ulp_wakeup_signal = 0;
     /*
       BaseType_t higher_prio_woken = pdFALSE;
       xSemaphoreGive(sem_ulp, &higher_prio_woken);

@@ -7,6 +7,7 @@
 // Must be used. Otherwise optimized out.
 // https://esp32.com/viewtopic.php?p=81491&sid=ec28339a89796fb78962d628e859bd76#p81491
 __attribute__ ((used)) uint32_t wakeup_count = 0;
+uint32_t wakeup_signal = 0;
 
 int main()
 {
@@ -19,6 +20,7 @@ int main()
       ulp_riscv_delay_cycles(1000 * ULP_RISCV_CYCLES_PER_MS);
     }
     wakeup_count++;
+    wakeup_signal = 1;
     ulp_riscv_wakeup_main_processor();
   }
 }
