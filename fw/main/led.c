@@ -357,6 +357,7 @@ static inline struct tint state_render(enum led_state_t state, int time)
 {
   switch (state) {
   case LED_STATE_IDLE:
+    return (struct tint){ 0.2f, 0.2f, 0 };
     return (struct tint){ 0, 0, 0 };
 
   case LED_STATE_STARTUP:

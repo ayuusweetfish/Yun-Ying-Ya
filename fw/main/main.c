@@ -4,7 +4,6 @@
 #include <inttypes.h>
 #include "sdkconfig.h"
 
-#include <stdatomic.h>
 #include "freertos/FreeRTOS.h"
 #include "esp_chip_info.h"
 #include "esp_clk_tree.h"
@@ -12,6 +11,7 @@
 #include "esp_log.h"
 #include "esp_pm.h"
 #include "esp_sleep.h"
+#include "esp_timer.h"
 #include "nvs_flash.h"
 #include "ulp_riscv.h"
 #include "driver/rtc_io.h"
@@ -53,30 +53,41 @@ if (1) {
 }
   led_set_state(LED_STATE_IDLE, 500);
 
-  SemaphoreHandle_t sem_ulp;
+  // XXX: This does not work when allocated on the stack, for unknown reasons?
+  static SemaphoreHandle_t sem_ulp;
   sem_ulp = xSemaphoreCreateBinary();
   assert(sem_ulp != NULL);
-
-  static atomic_flag ulp_wake_flag = ATOMIC_FLAG_INIT;
-  atomic_flag_test_and_set(&ulp_wake_flag);
 
   esp_err_t enter_cb(int64_t sleep_time_us, void *arg)
   {
     return ESP_OK;
   }
 
+/*
+  esp_timer_handle_t timer;
+  void timer_cb(void *_unused)
+  {
+    esp_timer_delete(timer);
+  }
+*/
+
   esp_err_t exit_cb(int64_t sleep_time_us, void *arg)
   {
-    // XXX: Can we use semaphores?
     if (ulp_wakeup_signal != 0) {
       ulp_wakeup_signal = 0;
-    /*
+
       BaseType_t higher_prio_woken = pdFALSE;
-      xSemaphoreGive(sem_ulp, &higher_prio_woken);
+      xSemaphoreGiveFromISR(sem_ulp, &higher_prio_woken);
       if (higher_prio_woken != pdFALSE)
         portYIELD_FROM_ISR(higher_prio_woken);
+    /*
+      esp_timer_create(&(esp_timer_create_args_t){
+        .callback = timer_cb,
+        .name = "ULP wakeup signal timer",
+        .dispatch_method = ESP_TIMER_ISR,
+      }, &timer);
+      esp_timer_start_once(timer, 10000);
     */
-      atomic_flag_clear(&ulp_wake_flag);
     }
     return ESP_OK;
   }
@@ -99,9 +110,7 @@ if (1) {
   esp_sleep_enable_ulp_wakeup();
 
   while (1) {
-    while (atomic_flag_test_and_set(&ulp_wake_flag))
-      vTaskDelay(100 / portTICK_PERIOD_MS);
-    // xSemaphoreTake(sem_ulp, portMAX_DELAY);
+    xSemaphoreTake(sem_ulp, portMAX_DELAY);
     printf("Wake up: %" PRId32 "\n", ulp_wakeup_count);
     led_set_state(LED_STATE_CONN_CHECK, 500);
     int http_test_result = http_test();
