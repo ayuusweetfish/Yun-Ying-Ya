@@ -11,7 +11,6 @@
 #include "esp_log.h"
 #include "esp_pm.h"
 #include "esp_sleep.h"
-#include "esp_timer.h"
 #include "nvs_flash.h"
 #include "ulp_riscv.h"
 #include "driver/rtc_io.h"
@@ -58,43 +57,22 @@ if (1) {
   sem_ulp = xSemaphoreCreateBinary();
   assert(sem_ulp != NULL);
 
-  esp_err_t enter_cb(int64_t sleep_time_us, void *arg)
-  {
-    return ESP_OK;
-  }
-
-/*
-  esp_timer_handle_t timer;
-  void timer_cb(void *_unused)
-  {
-    esp_timer_delete(timer);
-  }
-*/
-
-  esp_err_t exit_cb(int64_t sleep_time_us, void *arg)
+  esp_err_t exit_sleep_cb(int64_t sleep_time_us, void *arg)
   {
     if (ulp_wakeup_signal != 0) {
       ulp_wakeup_signal = 0;
 
-      BaseType_t higher_prio_woken = pdFALSE;
-      xSemaphoreGiveFromISR(sem_ulp, &higher_prio_woken);
-      if (higher_prio_woken != pdFALSE)
-        portYIELD_FROM_ISR(higher_prio_woken);
-    /*
-      esp_timer_create(&(esp_timer_create_args_t){
-        .callback = timer_cb,
-        .name = "ULP wakeup signal timer",
-        .dispatch_method = ESP_TIMER_ISR,
-      }, &timer);
-      esp_timer_start_once(timer, 10000);
-    */
+      xSemaphoreGiveFromISR(sem_ulp, NULL);
+      // Omitting the second argument and the manual yield does not affect
+      // behaviour. The only caveat is that higher-priority tasks may not
+      // be correctly preempting and instead wait for the next tick.
+      // As this is called in a critical section, we minimise unsafe moves.
     }
     return ESP_OK;
   }
 
   esp_pm_light_sleep_register_cbs(&(esp_pm_sleep_cbs_register_config_t){
-    .enter_cb = enter_cb,
-    .exit_cb = exit_cb,
+    .exit_cb = exit_sleep_cb,
   });
 
   rtc_gpio_init(GPIO_NUM_9);
