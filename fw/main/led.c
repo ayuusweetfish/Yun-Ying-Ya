@@ -25,6 +25,9 @@ static led_strip_handle_t led_strip;
 static inline void output_tint(float r, float g, float b);
 static void led_task_fn(void *_unused);
 
+static TaskHandle_t led_task_handle;
+static SemaphoreHandle_t led_mutex;
+
 void led_init()
 {
 #if USE_LED_STRIP
@@ -112,8 +115,12 @@ if (1) {
 #endif
 
   output_tint(0, 0, 0);
+
+  // Create lock
+  led_mutex = xSemaphoreCreateMutex();
+  assert(led_mutex != NULL);
   // High-priority
-  xTaskCreate(led_task_fn, "LED task", 4096, NULL, 8, NULL);
+  xTaskCreate(led_task_fn, "LED task", 4096, NULL, 8, &led_task_handle);
 }
 
 static inline void output_tint(float r, float g, float b)
@@ -292,20 +299,54 @@ static enum led_state_t last_state;
 static int transition_dur = 0;
 static int last_since_delta;
 
+/*
+Rationale for the locks.
+
+Step 1.
+In addition to the mutex covering state data (state and program),
+we would like to avoid the very edge case where update task decides
+that it should to sleep, but before it has the chance to actually do so,
+the main task preempts and "wakes up" the update task (a no-op at this time),
+and then the update task goes to sleep.
+
+Step 2.
+A binary semaphore solves the problem, but the current consumption is higher
+with the semaphore compared to `vTaskSuspend()`; light sleep seems to be
+activated less frequently due to `ulTaskNotifyTake()` blocking not being treated
+as a completely inactive thread (suspectedly due to the timeout, although it's
+set to `portMAX_DELAY`).
+
+Thus we use a semaphore combined with an additional `vTaskSuspend()`.
+This will not affect the behaviour, but marks the task as completely suspended
+to the scheduler, avoiding light-sleep interrupts during prolonged idle periods.
+
+TODO: In this commit, the `vTaskSuspend()` has not been added,
+thus the behaviour is correct but current consumption is higher than necessary.
+*/
+
 void led_set_state(enum led_state_t state, int transition)
 {
+  xSemaphoreTake(led_mutex, portMAX_DELAY);
+
   last_state = cur_state;
   transition_dur = transition;
   last_since_delta = since;
 
   cur_state = state;
   since = 0;
+
+  xSemaphoreGive(led_mutex);
+  // xTaskNotifyGive(led_task_handle);
+  vTaskResume(led_task_handle);
 }
 
 static inline struct tint state_render(enum led_state_t state, int time)
 {
   switch (state) {
   case LED_STATE_IDLE:
+    return (struct tint){ 0, 0, 0 };
+
+  case LED_STATE_STARTUP:
     return (struct tint){ 0.2f, 0.2f, 0 };
 
   case LED_STATE_CONN_CHECK:
@@ -339,12 +380,17 @@ void led_task_fn(void *_unused)
 {
 #define INTERVAL 20
   while (true) {
+    xSemaphoreTake(led_mutex, portMAX_DELAY);
+    // As the tint may depend on the program, we lock this entire section
+
     since += INTERVAL;
     struct tint t = state_render(cur_state, since);
+    bool suspend_task = false;
     if (transition_dur > 0) {
       if (since >= transition_dur) {
-        // Finish transition
+        // Finish transition; keep tint for current state
         transition_dur = 0;
+        if (cur_state == LED_STATE_IDLE) suspend_task = true;
       } else {
         // Fade
         float progress = (float)since / transition_dur;
@@ -357,9 +403,14 @@ void led_task_fn(void *_unused)
         t.b = t_last.b + (t.b - t_last.b) * progress;
       }
     }
+    xSemaphoreGive(led_mutex);
 
     output_tint(t.r, t.g, t.b);
 
+    if (suspend_task) {
+      vTaskSuspend(led_task_handle);
+      // ulTaskNotifyTake(pdTRUE /* binary semaphore */, portMAX_DELAY);
+    }
     vTaskDelay(INTERVAL / portTICK_PERIOD_MS);
   }
 }

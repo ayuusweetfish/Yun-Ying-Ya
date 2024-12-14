@@ -30,6 +30,7 @@ bool audio_speech_ended();
 void led_init();
 enum led_state_t {
   LED_STATE_IDLE,
+  LED_STATE_STARTUP,
   LED_STATE_CONN_CHECK,
   LED_STATE_SPEECH,
   LED_STATE_WAIT_RESPONSE,

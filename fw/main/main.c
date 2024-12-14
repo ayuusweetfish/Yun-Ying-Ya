@@ -24,6 +24,7 @@ void app_main(void)
   print_chip_info();
 
   led_init();
+  led_set_state(LED_STATE_STARTUP, 500);
 
   // NVS
   esp_err_t ret = nvs_flash_init();
@@ -54,12 +55,12 @@ if (1) {
 
   // `esp_pm/include/esp_pm.h`: Type is no longer implementation-specific
   ESP_ERROR_CHECK(esp_pm_configure(&(esp_pm_config_t){
-    .max_freq_mhz = 240,
+    .max_freq_mhz = 160,
     .min_freq_mhz =  10,
     .light_sleep_enable = true,
   }));
 
-  while (0) {
+  while (1) {
     vTaskDelay(15000 / portTICK_PERIOD_MS);
     led_set_state(LED_STATE_CONN_CHECK, 500);
     int http_test_result = http_test();

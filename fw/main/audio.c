@@ -54,7 +54,7 @@ void audio_init()
 
 static int wake_state = 0;
 
-SemaphoreHandle_t buffer_mutex;
+static SemaphoreHandle_t buffer_mutex;
 
 static int16_t *speech_buffer;
 #define SPEECH_BUFFER_SIZE (16000 * 5)
