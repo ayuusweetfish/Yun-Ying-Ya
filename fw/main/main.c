@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include "sdkconfig.h"
 
+#include <stdatomic.h>
 #include "freertos/FreeRTOS.h"
 #include "esp_chip_info.h"
 #include "esp_clk_tree.h"
@@ -14,6 +15,8 @@
 #include "nvs_flash.h"
 #include "ulp_riscv.h"
 #include "driver/rtc_io.h"
+
+#include "ulp_duck.h"
 
 #define TAG "main"
 
@@ -50,6 +53,38 @@ if (1) {
 }
   led_set_state(LED_STATE_IDLE, 500);
 
+  SemaphoreHandle_t sem_ulp;
+  sem_ulp = xSemaphoreCreateBinary();
+  assert(sem_ulp != NULL);
+
+  static atomic_flag ulp_wake_flag = ATOMIC_FLAG_INIT;
+  atomic_flag_test_and_set(&ulp_wake_flag);
+
+  esp_err_t enter_cb(int64_t sleep_time_us, void *arg)
+  {
+    return ESP_OK;
+  }
+
+  esp_err_t exit_cb(int64_t sleep_time_us, void *arg)
+  {
+    // Sometimes misses!
+    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_ULP) {
+    /*
+      BaseType_t higher_prio_woken = pdFALSE;
+      xSemaphoreGive(sem_ulp, &higher_prio_woken);
+      if (higher_prio_woken != pdFALSE)
+        portYIELD_FROM_ISR(higher_prio_woken);
+    */
+      atomic_flag_clear(&ulp_wake_flag);
+    }
+    return ESP_OK;
+  }
+
+  esp_pm_light_sleep_register_cbs(&(esp_pm_sleep_cbs_register_config_t){
+    .enter_cb = enter_cb,
+    .exit_cb = exit_cb,
+  });
+
   rtc_gpio_init(GPIO_NUM_9);
   rtc_gpio_set_direction(GPIO_NUM_9, RTC_GPIO_MODE_OUTPUT_ONLY);
   rtc_gpio_set_direction_in_sleep(GPIO_NUM_9, RTC_GPIO_MODE_OUTPUT_ONLY);
@@ -60,8 +95,13 @@ if (1) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
+  esp_sleep_enable_ulp_wakeup();
+
   while (1) {
-    vTaskDelay(15000 / portTICK_PERIOD_MS);
+    while (atomic_flag_test_and_set(&ulp_wake_flag))
+      vTaskDelay(100 / portTICK_PERIOD_MS);
+    // xSemaphoreTake(sem_ulp, portMAX_DELAY);
+    printf("Wake up: %" PRId32 "\n", ulp_wakeup_count);
     led_set_state(LED_STATE_CONN_CHECK, 500);
     int http_test_result = http_test();
     printf("HTTP test result: %d\n", http_test_result);

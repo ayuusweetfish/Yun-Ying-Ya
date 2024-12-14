@@ -320,16 +320,6 @@ activated less frequently due to `ulTaskNotifyTake()` blocking not being treated
 as a completely inactive thread (suspectedly due to the timeout, although it's
 set to `portMAX_DELAY`).
 
-REMOVED
-  Thus we assign a higher priority to the update task so that it will not be
-  preempted by the main task. This eliminates the original race condition, and
-  marks the task as completely suspended to the scheduler, avoiding interrupts in
-  light-sleep during prolonged idle periods.
-
-  In addition, the core affinity of the update task is set to the same as that of
-  the main task. Otherwise, the two tasks can still run concurrently, which we'd
-  like to avoid.
-
 We currently use `xSemaphoreTake()`, which correctly puts the task to
 suspended state. FreeRTOS documentation also mentions this behaviour;
 this is not present in `ulTaskNotifyTake()`, though the following source trace
