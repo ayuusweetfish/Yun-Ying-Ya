@@ -112,6 +112,10 @@ if (1) {
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(21));
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(8));
 
+  ESP_ERROR_CHECK(gpio_set_drive_capability(17, 1));
+  ESP_ERROR_CHECK(gpio_set_drive_capability(18, 1));
+  ESP_ERROR_CHECK(gpio_set_drive_capability(21, 1));
+
   ESP_LOGI(TAG, "Initialised LED with PWM controller");
 #endif
 
