@@ -44,7 +44,7 @@ void app_main(void)
   ESP_ERROR_CHECK(ret);
 
   // Wi-Fi
-if (1) {
+if (0) {
   wifi_init_sta();
   led_set_state(LED_STATE_CONN_CHECK, 500);
   int http_test_result = http_test();
@@ -75,6 +75,12 @@ if (1) {
     .exit_cb = exit_sleep_cb,
   });
 
+  rtc_gpio_init(GPIO_NUM_8);
+  rtc_gpio_set_direction(GPIO_NUM_8, RTC_GPIO_MODE_INPUT_OUTPUT);
+  rtc_gpio_set_direction_in_sleep(GPIO_NUM_8, RTC_GPIO_MODE_INPUT_OUTPUT);
+  rtc_gpio_pullup_en(GPIO_NUM_8);
+  rtc_gpio_pulldown_dis(GPIO_NUM_8);
+
   rtc_gpio_init(GPIO_NUM_9);
   rtc_gpio_set_direction(GPIO_NUM_9, RTC_GPIO_MODE_OUTPUT_ONLY);
   rtc_gpio_set_direction_in_sleep(GPIO_NUM_9, RTC_GPIO_MODE_OUTPUT_ONLY);
@@ -90,9 +96,13 @@ if (1) {
   while (1) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
     printf("Wake up: %" PRId32 "\n", ulp_wakeup_count);
+    printf("%" PRId32 ", %" PRId32 "\n", ulp_c0, ulp_c1);
     led_set_state(LED_STATE_CONN_CHECK, 500);
+  /*
     int http_test_result = http_test();
     printf("HTTP test result: %d\n", http_test_result);
+  */
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     led_set_state(LED_STATE_IDLE, 500);
   }
 
