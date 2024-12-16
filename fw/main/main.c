@@ -84,8 +84,8 @@ if (0) {
 */
 
   rtc_gpio_init(GPIO_NUM_9);
-  rtc_gpio_set_direction(GPIO_NUM_9, RTC_GPIO_MODE_OUTPUT_ONLY);
-  rtc_gpio_set_direction_in_sleep(GPIO_NUM_9, RTC_GPIO_MODE_OUTPUT_ONLY);
+  rtc_gpio_set_direction(GPIO_NUM_9, RTC_GPIO_MODE_INPUT_ONLY);
+  rtc_gpio_set_direction_in_sleep(GPIO_NUM_9, RTC_GPIO_MODE_INPUT_ONLY);
   rtc_gpio_pullup_dis(GPIO_NUM_9);
   rtc_gpio_pulldown_dis(GPIO_NUM_9);
   extern const uint8_t bin_start[] asm("_binary_ulp_duck_bin_start");
@@ -98,7 +98,227 @@ if (0) {
   while (1) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
     ESP_LOGI(TAG, "Wake up: %" PRId32, ulp_wakeup_count);
-    ESP_LOGI(TAG, "%" PRId32 ", %" PRId32, ulp_c0, ulp_c1);
+    // ESP_LOGI(TAG, "%08" PRIx32 ", %" PRId32, ulp_c0, ulp_c1);
+    char s[33];
+    for (int i = 0; i < 32; i++) s[i] = '0' + ((ulp_c0 >> (31 - i)) & 1);
+    s[32] = '\0';
+    ESP_LOGI(TAG, "read: %s, cycles: %" PRId32, s, ulp_c1);
+    // Direct:
+    // 16 bits:  159 cycles (0.56 us / bit 🎉)
+    // Unrolled `b = (b << 1) | ((REG_READ(RTC_GPIO_IN_REG) >> 19) & 1);`
+    // 32 bits:  819 cycles
+    // 64 bits: 1652 cycles
+/*
+00000014 <read>:
+  14:   c0002873                rdcycle a6
+  18:   67a9                    lui     a5,0xa
+  1a:   4247a683                lw      a3,1060(a5) # a424 <RTCCNTL+0x2424>
+  1e:   4247a603                lw      a2,1060(a5)
+  22:   4247a703                lw      a4,1060(a5)
+  26:   82c9                    srl     a3,a3,0x12
+  28:   824d                    srl     a2,a2,0x13
+  2a:   4247a583                lw      a1,1060(a5)
+  2e:   8a05                    and     a2,a2,1
+  30:   8a89                    and     a3,a3,2
+  32:   8ed1                    or      a3,a3,a2
+  34:   834d                    srl     a4,a4,0x13
+  36:   4247a603                lw      a2,1060(a5)
+  3a:   0686                    sll     a3,a3,0x1
+  3c:   8b05                    and     a4,a4,1
+  3e:   8f55                    or      a4,a4,a3
+  40:   81cd                    srl     a1,a1,0x13
+  42:   4247a683                lw      a3,1060(a5)
+  46:   0706                    sll     a4,a4,0x1
+  48:   8985                    and     a1,a1,1
+  4a:   8dd9                    or      a1,a1,a4
+  4c:   824d                    srl     a2,a2,0x13
+  4e:   4247a703                lw      a4,1060(a5)
+  52:   0586                    sll     a1,a1,0x1
+  54:   8a05                    and     a2,a2,1
+  56:   8e4d                    or      a2,a2,a1
+  58:   82cd                    srl     a3,a3,0x13
+  5a:   4247a583                lw      a1,1060(a5)
+  5e:   0606                    sll     a2,a2,0x1
+  60:   8a85                    and     a3,a3,1
+  62:   8ed1                    or      a3,a3,a2
+  64:   834d                    srl     a4,a4,0x13
+  66:   4247a603                lw      a2,1060(a5)
+  6a:   0686                    sll     a3,a3,0x1
+  6c:   8b05                    and     a4,a4,1
+  6e:   8f55                    or      a4,a4,a3
+  70:   81cd                    srl     a1,a1,0x13
+  72:   4247a683                lw      a3,1060(a5)
+  76:   0706                    sll     a4,a4,0x1
+  78:   8985                    and     a1,a1,1
+  7a:   8dd9                    or      a1,a1,a4
+  7c:   824d                    srl     a2,a2,0x13
+  7e:   4247a703                lw      a4,1060(a5)
+  82:   0586                    sll     a1,a1,0x1
+  84:   8a05                    and     a2,a2,1
+  86:   8e4d                    or      a2,a2,a1
+  88:   82cd                    srl     a3,a3,0x13
+  8a:   4247a583                lw      a1,1060(a5)
+  8e:   0606                    sll     a2,a2,0x1
+  90:   8a85                    and     a3,a3,1
+  92:   8ed1                    or      a3,a3,a2
+  94:   834d                    srl     a4,a4,0x13
+  96:   4247a603                lw      a2,1060(a5)
+  9a:   0686                    sll     a3,a3,0x1
+  9c:   8b05                    and     a4,a4,1
+  9e:   8f55                    or      a4,a4,a3
+  a0:   81cd                    srl     a1,a1,0x13
+  a2:   4247a683                lw      a3,1060(a5)
+  a6:   0706                    sll     a4,a4,0x1
+  a8:   8985                    and     a1,a1,1
+  aa:   8dd9                    or      a1,a1,a4
+  ac:   824d                    srl     a2,a2,0x13
+  ae:   4247a703                lw      a4,1060(a5)
+  b2:   0586                    sll     a1,a1,0x1
+  b4:   8a05                    and     a2,a2,1
+  b6:   8e4d                    or      a2,a2,a1
+  b8:   82cd                    srl     a3,a3,0x13
+  ba:   4247a583                lw      a1,1060(a5)
+  be:   0606                    sll     a2,a2,0x1
+  c0:   8a85                    and     a3,a3,1
+  c2:   8ed1                    or      a3,a3,a2
+  c4:   834d                    srl     a4,a4,0x13
+  c6:   4247a603                lw      a2,1060(a5)
+  ca:   0686                    sll     a3,a3,0x1
+  cc:   8b05                    and     a4,a4,1
+  ce:   8f55                    or      a4,a4,a3
+  d0:   81cd                    srl     a1,a1,0x13
+  d2:   4247a683                lw      a3,1060(a5)
+  d6:   0706                    sll     a4,a4,0x1
+  d8:   8985                    and     a1,a1,1
+  da:   8dd9                    or      a1,a1,a4
+  dc:   824d                    srl     a2,a2,0x13
+  de:   4247a703                lw      a4,1060(a5)
+  e2:   0586                    sll     a1,a1,0x1
+  e4:   8a05                    and     a2,a2,1
+  e6:   8e4d                    or      a2,a2,a1
+  e8:   82cd                    srl     a3,a3,0x13
+  ea:   4247a583                lw      a1,1060(a5)
+  ee:   0606                    sll     a2,a2,0x1
+  f0:   8a85                    and     a3,a3,1
+  f2:   8ed1                    or      a3,a3,a2
+  f4:   834d                    srl     a4,a4,0x13
+  f6:   4247a603                lw      a2,1060(a5)
+  fa:   0686                    sll     a3,a3,0x1
+  fc:   8b05                    and     a4,a4,1
+  fe:   8f55                    or      a4,a4,a3
+ 100:   81cd                    srl     a1,a1,0x13
+ 102:   4247a683                lw      a3,1060(a5)
+ 106:   0706                    sll     a4,a4,0x1
+ 108:   8985                    and     a1,a1,1
+ 10a:   8dd9                    or      a1,a1,a4
+ 10c:   824d                    srl     a2,a2,0x13
+ 10e:   4247a703                lw      a4,1060(a5)
+ 112:   0586                    sll     a1,a1,0x1
+ 114:   8a05                    and     a2,a2,1
+ 116:   8e4d                    or      a2,a2,a1
+ 118:   82cd                    srl     a3,a3,0x13
+ 11a:   4247a583                lw      a1,1060(a5)
+ 11e:   0606                    sll     a2,a2,0x1
+ 120:   8a85                    and     a3,a3,1
+ 122:   8ed1                    or      a3,a3,a2
+ 124:   834d                    srl     a4,a4,0x13
+ 126:   4247a603                lw      a2,1060(a5)
+ 12a:   0686                    sll     a3,a3,0x1
+ 12c:   8b05                    and     a4,a4,1
+ 12e:   8f55                    or      a4,a4,a3
+ 130:   81cd                    srl     a1,a1,0x13
+ 132:   4247a683                lw      a3,1060(a5)
+ 136:   0706                    sll     a4,a4,0x1
+ 138:   8985                    and     a1,a1,1
+ 13a:   8dd9                    or      a1,a1,a4
+ 13c:   824d                    srl     a2,a2,0x13
+ 13e:   4247a703                lw      a4,1060(a5)
+ 142:   0586                    sll     a1,a1,0x1
+ 144:   8a05                    and     a2,a2,1
+ 146:   8e4d                    or      a2,a2,a1
+ 148:   82cd                    srl     a3,a3,0x13
+ 14a:   4247a583                lw      a1,1060(a5)
+ 14e:   0606                    sll     a2,a2,0x1
+ 150:   8a85                    and     a3,a3,1
+ 152:   8ed1                    or      a3,a3,a2
+ 154:   834d                    srl     a4,a4,0x13
+ 156:   4247a603                lw      a2,1060(a5)
+ 15a:   0686                    sll     a3,a3,0x1
+ 15c:   8b05                    and     a4,a4,1
+ 15e:   8f55                    or      a4,a4,a3
+ 160:   81cd                    srl     a1,a1,0x13
+ 162:   4247a683                lw      a3,1060(a5)
+ 166:   0706                    sll     a4,a4,0x1
+ 168:   8985                    and     a1,a1,1
+ 16a:   8dd9                    or      a1,a1,a4
+ 16c:   824d                    srl     a2,a2,0x13
+ 16e:   4247a703                lw      a4,1060(a5)
+ 172:   0586                    sll     a1,a1,0x1
+ 174:   8a05                    and     a2,a2,1
+ 176:   8e4d                    or      a2,a2,a1
+ 178:   82cd                    srl     a3,a3,0x13
+ 17a:   0606                    sll     a2,a2,0x1
+ 17c:   8a85                    and     a3,a3,1
+ 17e:   8ed1                    or      a3,a3,a2
+ 180:   834d                    srl     a4,a4,0x13
+ 182:   0686                    sll     a3,a3,0x1
+ 184:   8b05                    and     a4,a4,1
+ 186:   8f55                    or      a4,a4,a3
+ 188:   0706                    sll     a4,a4,0x1
+ 18a:   4247a503                lw      a0,1060(a5)
+ 18e:   c00027f3                rdcycle a5
+ 192:   814d                    srl     a0,a0,0x13
+ 194:   410787b3                sub     a5,a5,a6
+ 198:   8905                    and     a0,a0,1
+ 19a:   26f02023                sw      a5,608(zero) # 260 <c1>
+ 19e:   8d59                    or      a0,a0,a4
+ 1a0:   8082                    ret
+*/
+    // Unrolled `REG_READ(RTC_GPIO_IN_REG);`
+    // 32 bits: 329 cycles
+/*
+00000014 <read>:
+  14:   c0002773                rdcycle a4
+  18:   67a9                    lui     a5,0xa
+  1a:   4247a683                lw      a3,1060(a5) # a424 <RTCCNTL+0x2424>
+  1e:   4247a683                lw      a3,1060(a5)
+  22:   4247a683                lw      a3,1060(a5)
+  26:   4247a683                lw      a3,1060(a5)
+  2a:   4247a683                lw      a3,1060(a5)
+  2e:   4247a683                lw      a3,1060(a5)
+  32:   4247a683                lw      a3,1060(a5)
+  36:   4247a683                lw      a3,1060(a5)
+  3a:   4247a683                lw      a3,1060(a5)
+  3e:   4247a683                lw      a3,1060(a5)
+  42:   4247a683                lw      a3,1060(a5)
+  46:   4247a683                lw      a3,1060(a5)
+  4a:   4247a683                lw      a3,1060(a5)
+  4e:   4247a683                lw      a3,1060(a5)
+  52:   4247a683                lw      a3,1060(a5)
+  56:   4247a683                lw      a3,1060(a5)
+  5a:   4247a683                lw      a3,1060(a5)
+  5e:   4247a683                lw      a3,1060(a5)
+  62:   4247a683                lw      a3,1060(a5)
+  66:   4247a683                lw      a3,1060(a5)
+  6a:   4247a683                lw      a3,1060(a5)
+  6e:   4247a683                lw      a3,1060(a5)
+  72:   4247a683                lw      a3,1060(a5)
+  76:   4247a683                lw      a3,1060(a5)
+  7a:   4247a683                lw      a3,1060(a5)
+  7e:   4247a683                lw      a3,1060(a5)
+  82:   4247a683                lw      a3,1060(a5)
+  86:   4247a683                lw      a3,1060(a5)
+  8a:   4247a683                lw      a3,1060(a5)
+  8e:   42478793                add     a5,a5,1060
+  92:   4394                    lw      a3,0(a5)
+  94:   4394                    lw      a3,0(a5)
+  96:   439c                    lw      a5,0(a5)
+  98:   c00027f3                rdcycle a5
+  9c:   8f99                    sub     a5,a5,a4
+  9e:   16f02223                sw      a5,356(zero) # 164 <c1>
+  a2:   4501                    li      a0,0
+  a4:   8082                    ret
+*/
     led_set_state(LED_STATE_CONN_CHECK, 500);
   /*
     int http_test_result = http_test();
