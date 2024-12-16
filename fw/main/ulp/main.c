@@ -44,7 +44,20 @@ int main()
     c0 = read();
     wakeup_count++;
     wakeup_signal = 1;
-    c2 = ULP_RISCV_GET_CCOUNT();
+    uint32_t t1, t2;
+    asm volatile (
+      "rdcycle %0\n"
+      // (empty): 5
+      // nop: 11
+      // nop; nop: 13
+      // addi %2, %2, 1: 11
+      // addi %2, %2, 1; addi %2, %2, 1: 13
+      "addi %2, %2, 1\n"
+      "addi %2, %2, 1\n"
+      "rdcycle %1\n"
+      : "=r" (t1), "=r" (t2), "+r" (wakeup_count)
+    );
+    c2 = t2 - t1;
     ulp_riscv_wakeup_main_processor();
   }
 }
