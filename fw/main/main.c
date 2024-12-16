@@ -14,6 +14,7 @@
 #include "nvs_flash.h"
 #include "ulp_riscv.h"
 #include "driver/rtc_io.h"
+#include "soc/rtc.h"
 
 #include "ulp_duck.h"
 
@@ -99,9 +100,9 @@ if (0) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
     ESP_LOGI(TAG, "Wake up: %" PRId32, ulp_wakeup_count);
     // ESP_LOGI(TAG, "%08" PRIx32 ", %" PRId32, ulp_c0, ulp_c1);
-    char s[33];
-    for (int i = 0; i < 32; i++) s[i] = '0' + ((ulp_c0 >> (31 - i)) & 1);
-    s[32] = '\0';
+    char s[17];
+    for (int i = 0; i < 16; i++) s[i] = '0' + ((ulp_c0 >> (15 - i)) & 1);
+    s[16] = '\0';
     ESP_LOGI(TAG, "read: %s, cycles: %" PRId32, s, ulp_c1);
     // Direct:
     // 16 bits:  159 cycles (0.56 us / bit 🎉)
@@ -319,6 +320,11 @@ if (0) {
   a2:   4501                    li      a0,0
   a4:   8082                    ret
 */
+
+    uint32_t rtc_clk_period = rtc_clk_cal(RTC_CAL_8MD256, 100);
+    uint32_t rtc_fast_hz = 1000000ULL * (1 << RTC_CLK_CAL_FRACT) * 256 / rtc_clk_period;
+    ESP_LOGI(TAG, "RTC_FAST_CLK = %" PRIu32 " Hz", rtc_fast_hz);
+
     led_set_state(LED_STATE_CONN_CHECK, 500);
   /*
     int http_test_result = http_test();
