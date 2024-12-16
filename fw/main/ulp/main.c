@@ -94,7 +94,7 @@ int main()
   ulp_riscv_gpio_init(GPIO_NUM_9);
   // ulp_riscv_gpio_init(GPIO_NUM_8);
   while (1) {
-    ulp_riscv_delay_cycles(1000 * ULP_RISCV_CYCLES_PER_MS);
+    ulp_riscv_delay_cycles(1000 * 20000);
     c0 = read();
     wakeup_count++;
     wakeup_signal = 1;

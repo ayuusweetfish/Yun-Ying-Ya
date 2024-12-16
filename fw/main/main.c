@@ -15,6 +15,7 @@
 #include "ulp_riscv.h"
 #include "driver/rtc_io.h"
 #include "soc/rtc.h"
+#include "soc/rtc_cntl_reg.h"
 
 #include "ulp_duck.h"
 
@@ -76,6 +77,10 @@ if (0) {
     .exit_cb = exit_sleep_cb,
   });
 
+  // REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_FAST_CLK_RTC_SEL, 0);
+  rtc_clk_fast_src_set(SOC_RTC_FAST_CLK_SRC_XTAL_D2);
+  ESP_LOGI(TAG, "RTC_CNTL_FAST_CLK_RTC_SEL: %u", (unsigned)REG_GET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_FAST_CLK_RTC_SEL));
+
 /*
   rtc_gpio_init(GPIO_NUM_8);
   rtc_gpio_set_direction(GPIO_NUM_8, RTC_GPIO_MODE_INPUT_OUTPUT);
@@ -93,6 +98,7 @@ if (0) {
   extern const uint8_t bin_end[]   asm("_binary_ulp_duck_bin_end");
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
+  ESP_LOGI(TAG, "RTC_CNTL_FAST_CLK_RTC_SEL: %u", (unsigned)REG_GET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_FAST_CLK_RTC_SEL));
 
   esp_sleep_enable_ulp_wakeup();
 
@@ -323,14 +329,14 @@ if (0) {
 
     uint32_t rtc_clk_period = rtc_clk_cal(RTC_CAL_8MD256, 100);
     uint32_t rtc_fast_hz = 1000000ULL * (1 << RTC_CLK_CAL_FRACT) * 256 / rtc_clk_period;
-    ESP_LOGI(TAG, "RTC_FAST_CLK = %" PRIu32 " Hz", rtc_fast_hz);
+    ESP_LOGI(TAG, "RC_FAST_CLK = %" PRIu32 " Hz", rtc_fast_hz);
 
     led_set_state(LED_STATE_CONN_CHECK, 500);
   /*
     int http_test_result = http_test();
     printf("HTTP test result: %d\n", http_test_result);
   */
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
     led_set_state(LED_STATE_IDLE, 500);
   }
 
