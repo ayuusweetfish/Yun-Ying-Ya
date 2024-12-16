@@ -88,7 +88,7 @@ if (1) {
     .speed_mode = LEDC_LOW_SPEED_MODE,
     .duty_resolution = LEDC_TIMER_2_BIT,
     .timer_num = LEDC_TIMER_1,
-    .freq_hz = 100000, // 1024000,
+    .freq_hz = 102400,
     .clk_cfg = LEDC_USE_XTAL_CLK,
   }));
   ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){

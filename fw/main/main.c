@@ -75,11 +75,13 @@ if (0) {
     .exit_cb = exit_sleep_cb,
   });
 
+/*
   rtc_gpio_init(GPIO_NUM_8);
   rtc_gpio_set_direction(GPIO_NUM_8, RTC_GPIO_MODE_INPUT_OUTPUT);
   rtc_gpio_set_direction_in_sleep(GPIO_NUM_8, RTC_GPIO_MODE_INPUT_OUTPUT);
   rtc_gpio_pullup_en(GPIO_NUM_8);
   rtc_gpio_pulldown_dis(GPIO_NUM_8);
+*/
 
   rtc_gpio_init(GPIO_NUM_9);
   rtc_gpio_set_direction(GPIO_NUM_9, RTC_GPIO_MODE_OUTPUT_ONLY);
@@ -95,8 +97,8 @@ if (0) {
 
   while (1) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
-    printf("Wake up: %" PRId32 "\n", ulp_wakeup_count);
-    printf("%" PRId32 ", %" PRId32 "\n", ulp_c0, ulp_c1);
+    ESP_LOGI(TAG, "Wake up: %" PRId32, ulp_wakeup_count);
+    ESP_LOGI(TAG, "%" PRId32 ", %" PRId32, ulp_c0, ulp_c1);
     led_set_state(LED_STATE_CONN_CHECK, 500);
   /*
     int http_test_result = http_test();
