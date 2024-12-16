@@ -15,7 +15,6 @@
 #include "ulp_riscv.h"
 #include "driver/rtc_io.h"
 #include "soc/rtc.h"
-#include "soc/rtc_cntl_reg.h"
 
 #include "ulp_duck.h"
 
@@ -77,7 +76,6 @@ if (0) {
     .exit_cb = exit_sleep_cb,
   });
 
-  ESP_LOGI(TAG, "RTC_CNTL_FAST_CLK_RTC_SEL: %u", (unsigned)REG_GET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_FAST_CLK_RTC_SEL));
   rtc_clk_fast_src_set(SOC_RTC_FAST_CLK_SRC_XTAL_D2);
 
 /*
@@ -97,7 +95,6 @@ if (0) {
   extern const uint8_t bin_end[]   asm("_binary_ulp_duck_bin_end");
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
-  ESP_LOGI(TAG, "RTC_CNTL_FAST_CLK_RTC_SEL: %u", (unsigned)REG_GET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_FAST_CLK_RTC_SEL));
 
   esp_sleep_enable_ulp_wakeup();
 
@@ -108,11 +105,6 @@ if (0) {
     for (int i = 0; i < 16; i++) s[i] = '0' + ((ulp_c0 >> (15 - i)) & 1);
     s[16] = '\0';
     ESP_LOGI(TAG, "read: %s, cycles: %" PRIu32 ", total: %10" PRIu32, s, ulp_c1, ulp_c2);
-    // Unrolled `REG_READ(RTC_GPIO_IN_REG)`:
-    // 16 bits:  159 cycles (0.56 us / bit 🎉)
-    // Unrolled `b = (b << 1) | ((REG_READ(RTC_GPIO_IN_REG) >> 19) & 1);`
-    // 32 bits:  819 cycles
-    // 64 bits: 1652 cycles
 
     led_set_state(LED_STATE_CONN_CHECK, 500);
   /*
