@@ -3,6 +3,8 @@
 #include "esp_err.h"
 #include <stdbool.h>
 
+#include "pins.h"
+
 void wifi_init_sta();
 
 esp_err_t update_time_from_nvs(void);

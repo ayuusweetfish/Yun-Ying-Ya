@@ -60,7 +60,6 @@ void led_init()
 #endif
 
 #if USE_LED_PWM
-if (1) {
   ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
     .duty_resolution = LEDC_TIMER_11_BIT,
@@ -69,9 +68,9 @@ if (1) {
     .clk_cfg = LEDC_USE_XTAL_CLK,
   }));
   static const struct { ledc_channel_t ch; int pin; } channels[3] = {
-    {LEDC_CHANNEL_0, 17},
-    {LEDC_CHANNEL_1, 18},
-    {LEDC_CHANNEL_2, 21},
+    {LEDC_CHANNEL_0, PIN_R},
+    {LEDC_CHANNEL_1, PIN_G},
+    {LEDC_CHANNEL_2, PIN_B},
   };
   for (int i = 0; i < 3; i++)
     ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){
@@ -95,26 +94,17 @@ if (1) {
     .speed_mode = LEDC_LOW_SPEED_MODE,
     .channel = LEDC_CHANNEL_3,
     .timer_sel = LEDC_TIMER_1,
-    .gpio_num = 8,
+    .gpio_num = PIN_I2S_BCK,
     .duty = 0b10,
   }));
-} else {
-  gpio_config(&(gpio_config_t){
-    .pin_bit_mask = (1 << 17) | (1 << 18) | (1 << 21),
-    .mode = GPIO_MODE_OUTPUT,
-    .pull_up_en = GPIO_PULLUP_ENABLE,
-  });
-}
 
   ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_ON));
-  ESP_ERROR_CHECK(gpio_sleep_sel_dis(17));
-  ESP_ERROR_CHECK(gpio_sleep_sel_dis(18));
-  ESP_ERROR_CHECK(gpio_sleep_sel_dis(21));
-  ESP_ERROR_CHECK(gpio_sleep_sel_dis(8));
+  for (int i = 0; i < 3; i++) {
+    ESP_ERROR_CHECK(gpio_sleep_sel_dis(channels[i].pin));
+    ESP_ERROR_CHECK(gpio_set_drive_capability(channels[i].pin, 1));
+  }
 
-  ESP_ERROR_CHECK(gpio_set_drive_capability(17, 1));
-  ESP_ERROR_CHECK(gpio_set_drive_capability(18, 1));
-  ESP_ERROR_CHECK(gpio_set_drive_capability(21, 1));
+  ESP_ERROR_CHECK(gpio_sleep_sel_dis(PIN_I2S_BCK));
 
   ESP_LOGI(TAG, "Initialised LED with PWM controller");
 #endif

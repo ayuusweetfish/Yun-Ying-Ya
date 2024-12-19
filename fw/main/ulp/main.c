@@ -4,6 +4,8 @@
 #include "ulp_riscv_utils.h"
 #include "ulp_riscv_gpio.h"
 
+#include "../pins.h"
+
 // Must be used. Otherwise optimized out.
 // https://esp32.com/viewtopic.php?p=81491&sid=ec28339a89796fb78962d628e859bd76#p81491
 uint32_t wakeup_count = 0;
@@ -20,7 +22,7 @@ uint32_t read()
   uint32_t b[16];
   #pragma GCC unroll 16
   for (int i = 0; i < 16; i++)
-    b[i] = (REG_READ(RTC_GPIO_IN_REG) >> 19) & 1;
+    b[i] = (REG_READ(RTC_GPIO_IN_REG) >> (10 + PIN_I2S_BCK_PROBE)) & 1;
 
   c1 = ULP_RISCV_GET_CCOUNT() - t;
 
@@ -35,8 +37,7 @@ uint32_t read()
 int main()
 {
   wakeup_signal = wakeup_count = c0 = c1 = c2 = 0;
-  ulp_riscv_gpio_init(GPIO_NUM_9);
-  // ulp_riscv_gpio_init(GPIO_NUM_8);
+  ulp_riscv_gpio_init(PIN_I2S_BCK_PROBE);
   uint32_t t = ULP_RISCV_GET_CCOUNT();
   while (1) {
     t += 1000 * 20000;

@@ -78,19 +78,11 @@ if (0) {
 
   rtc_clk_fast_src_set(SOC_RTC_FAST_CLK_SRC_XTAL_D2);
 
-/*
-  rtc_gpio_init(GPIO_NUM_8);
-  rtc_gpio_set_direction(GPIO_NUM_8, RTC_GPIO_MODE_INPUT_OUTPUT);
-  rtc_gpio_set_direction_in_sleep(GPIO_NUM_8, RTC_GPIO_MODE_INPUT_OUTPUT);
-  rtc_gpio_pullup_en(GPIO_NUM_8);
-  rtc_gpio_pulldown_dis(GPIO_NUM_8);
-*/
-
-  rtc_gpio_init(GPIO_NUM_9);
-  rtc_gpio_set_direction(GPIO_NUM_9, RTC_GPIO_MODE_INPUT_ONLY);
-  rtc_gpio_set_direction_in_sleep(GPIO_NUM_9, RTC_GPIO_MODE_INPUT_ONLY);
-  rtc_gpio_pullup_dis(GPIO_NUM_9);
-  rtc_gpio_pulldown_dis(GPIO_NUM_9);
+  rtc_gpio_init(PIN_I2S_BCK_PROBE);
+  rtc_gpio_set_direction(PIN_I2S_BCK_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
+  rtc_gpio_set_direction_in_sleep(PIN_I2S_BCK_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
+  rtc_gpio_pullup_dis(PIN_I2S_BCK_PROBE);
+  rtc_gpio_pulldown_dis(PIN_I2S_BCK_PROBE);
   extern const uint8_t bin_start[] asm("_binary_ulp_duck_bin_start");
   extern const uint8_t bin_end[]   asm("_binary_ulp_duck_bin_end");
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
