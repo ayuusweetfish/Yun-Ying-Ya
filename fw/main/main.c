@@ -45,7 +45,7 @@ void app_main(void)
   ESP_ERROR_CHECK(ret);
 
   // Wi-Fi
-if (0) {
+if (1) {
   wifi_init_sta();
   led_set_state(LED_STATE_CONN_CHECK, 500);
   int http_test_result = http_test();
@@ -90,7 +90,7 @@ if (0) {
 
   esp_sleep_enable_ulp_wakeup();
 
-  while (1) {
+  while (0) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
     ESP_LOGI(TAG, "Wake up: %" PRId32, ulp_wakeup_count);
     char s[17];

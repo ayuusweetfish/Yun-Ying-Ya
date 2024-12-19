@@ -35,7 +35,7 @@ void i2s_init()
     },
   };
   // Set according to INMP441's L/R pin (low - left, high - right)
-  rx_std_cfg.slot_cfg.slot_mask = I2S_STD_SLOT_RIGHT;
+  rx_std_cfg.slot_cfg.slot_mask = (PIN_I2S_LR ? I2S_STD_SLOT_RIGHT : I2S_STD_SLOT_LEFT);
   ESP_ERROR_CHECK(i2s_channel_init_std_mode(rx_chan, &rx_std_cfg));
 
 #if 0
