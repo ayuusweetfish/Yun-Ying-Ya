@@ -18,15 +18,16 @@ uint32_t debug[32];
 #pragma GCC optimize("O3")
 uint32_t read()
 {
-  uint32_t b[20];
+  uint32_t b[24];
 
   // Wait for WS falling edge
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
-  uint32_t t = ULP_RISCV_GET_CCOUNT();
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
+  uint32_t t = ULP_RISCV_GET_CCOUNT();
 
 #if 1
-  uint32_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19;
+  uint32_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11,
+           b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23;
   uint32_t addr;
 // ', '.join('b%d' % i for i in range(20))
   __asm__ volatile (
@@ -51,6 +52,10 @@ uint32_t read()
     "lw %[b17], 0x424(%[addr])\n"
     "lw %[b18], 0x424(%[addr])\n"
     "lw %[b19], 0x424(%[addr])\n"
+    "lw %[b20], 0x424(%[addr])\n"
+    "lw %[b21], 0x424(%[addr])\n"
+    "lw %[b22], 0x424(%[addr])\n"
+    "lw %[b23], 0x424(%[addr])\n"
 // ''.join('"lw %%[b%d], 0x424(%%[addr])\\n"\n' % i for i in range(20))
     : [addr] "=&r" (addr)
      ,[b0] "=&r" (b0)
@@ -73,6 +78,10 @@ uint32_t read()
      ,[b17] "=&r" (b17)
      ,[b18] "=&r" (b18)
      ,[b19] "=&r" (b19)
+     ,[b20] "=&r" (b20)
+     ,[b21] "=&r" (b21)
+     ,[b22] "=&r" (b22)
+     ,[b23] "=&r" (b23)
 // ''.join(' ,[b%d] "=&r" (b%d)\n' % (i, i) for i in range(20))
   );
 
@@ -96,6 +105,10 @@ uint32_t read()
   b[17] = b17;
   b[18] = b18;
   b[19] = b19;
+  b[20] = b20;
+  b[21] = b21;
+  b[22] = b22;
+  b[23] = b23;
 // ''.join('b[%d] = b%d;\n' % (i, i) for i in range(20))
 
 #else
@@ -105,12 +118,32 @@ uint32_t read()
 
 #endif
 
-  uint32_t x = 0;
-  if (0) for (int i = 0; i < 16; i++)
-    x |= (b[i]) << (15 - i);
+if (0) {
+  uint32_t ws = 0, bck = 0, din = 0;
+  #pragma GCC unroll 24
+  for (int i = 0; i < 24; i++) ws  = (ws  << 1) | ((b[i] >> (10 + PIN_I2S_WS_PROBE)) & 1);
+  #pragma GCC unroll 24
+  for (int i = 0; i < 24; i++) bck = (bck << 1) | ((b[i] >> (10 + PIN_I2S_BCK_PROBE)) & 1);
+  #pragma GCC unroll 24
+  for (int i = 0; i < 24; i++) din = (din << 1) | ((b[i] >> (10 + PIN_I2S_DIN)) & 1);
+  debug[0] = ws;
+  debug[1] = bck;
+  debug[2] = din;
+}
 
-  for (int i = 0; i < 20; i++)
-    debug[i] = b[i] >> 10;
+  uint32_t x = 0;
+  uint32_t n = 0;
+  #pragma GCC unroll 24
+  for (int i = 0; i < 24; i++) {
+    if (
+      ((b[i] >> (10 + PIN_I2S_BCK_PROBE)) & 1) &&
+      (i == 0 || !((b[i - 1] >> (10 + PIN_I2S_BCK_PROBE)) & 1))
+    ) {
+      x = (x << 1) | ((b[i] >> (10 + PIN_I2S_DIN)) & 1);
+      n++;
+    }
+  }
+  x <<= (16 - n);
 
   c1 = ULP_RISCV_GET_CCOUNT() - t;
 
@@ -120,13 +153,13 @@ uint32_t read()
 
 int main()
 {
-  wakeup_signal = wakeup_count = c0 = c1 = c2 = 0;
+  wakeup_signal = wakeup_count = c0 = c1 = c2 = debug[0] = 0;
   ulp_riscv_gpio_init(PIN_I2S_BCK_PROBE);
   ulp_riscv_gpio_init(PIN_I2S_WS_PROBE);
   ulp_riscv_gpio_init(PIN_I2S_DIN);
   uint32_t t = ULP_RISCV_GET_CCOUNT();
   while (1) {
-    t += 500 * 20000;
+    t += 1000 * 20000;
     while (ULP_RISCV_GET_CCOUNT() - t >= 0x80000000) { }
     c0 = read();
     wakeup_count++;

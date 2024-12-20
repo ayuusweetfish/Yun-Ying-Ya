@@ -132,16 +132,19 @@ if (0) {
 
   while (1) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
-    ESP_LOGI(TAG, "Wake up: %" PRIu32 " %" PRIu32, ulp_wakeup_count, ulp_c1);
+    ESP_LOGI(TAG, "Wake up: %" PRIu32 " %04" PRIx32 " %" PRIu32, ulp_wakeup_count, ulp_c0, ulp_c1);
+    // ~800 cycles for 24 bits
+  if (0) {
     const int N = 20;
     char s[N + 1]; s[N] = '\0';
-    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_WS_PROBE)) ? '*' : '.';
+    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[0] & (1 << (N - 1 - i))) ? '*' : '.';
     ESP_LOGI(TAG, " WS: %s", s);
-    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_BCK_PROBE)) ? '*' : '.';
+    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[1] & (1 << (N - 1 - i))) ? '*' : '.';
     ESP_LOGI(TAG, "BCK: %s", s);
-    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_DIN)) ? '*' : '.';
+    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[2] & (1 << (N - 1 - i))) ? '*' : '.';
     ESP_LOGI(TAG, "DIN: %s", s);
     ESP_LOGI(TAG, "");
+  }
 
     led_set_state(LED_STATE_CONN_CHECK, 500);
   /*
