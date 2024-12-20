@@ -132,14 +132,14 @@ if (0) {
 
   while (1) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
-    ESP_LOGI(TAG, "Wake up: %" PRId32, ulp_wakeup_count);
-    const int N = 16;
+    ESP_LOGI(TAG, "Wake up: %" PRIu32 " %" PRIu32, ulp_wakeup_count, ulp_c1);
+    const int N = 20;
     char s[N + 1]; s[N] = '\0';
-    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_WS_PROBE)) ? '*' : ' ';
+    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_WS_PROBE)) ? '*' : '.';
     ESP_LOGI(TAG, " WS: %s", s);
-    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_BCK_PROBE)) ? '*' : ' ';
+    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_BCK_PROBE)) ? '*' : '.';
     ESP_LOGI(TAG, "BCK: %s", s);
-    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_DIN)) ? '*' : ' ';
+    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_DIN)) ? '*' : '.';
     ESP_LOGI(TAG, "DIN: %s", s);
     ESP_LOGI(TAG, "");
 
