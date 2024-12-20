@@ -14,6 +14,7 @@ static const char *TAG = "LED";
 #if USE_LED_STRIP
 #include "led_strip.h"
 static led_strip_handle_t led_strip;
+// Needs extra component `esp_driver_rmt`
 #endif
 
 #if USE_LED_PWM

@@ -4,7 +4,6 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
-#include "esp_eap_client.h"
 #include "esp_timer.h"
 #include <string.h>
 
@@ -20,6 +19,8 @@
   #ifndef EXAMPLE_ESP_WIFI_EAP_ANON
   #define EXAMPLE_ESP_WIFI_EAP_ANON "user@tsinghua.edu.cn"
   #endif
+  #include "esp_eap_client.h"
+  // Needs extra component `wpa_supplicant`
 #else
   #define PEAP 0
 #endif
