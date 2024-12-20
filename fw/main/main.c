@@ -83,21 +83,17 @@ if (0) {
   rtc_gpio_init(PIN_I2S_BCK_PROBE);
   rtc_gpio_set_direction(PIN_I2S_BCK_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
   rtc_gpio_set_direction_in_sleep(PIN_I2S_BCK_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
-  rtc_gpio_pullup_dis(PIN_I2S_BCK_PROBE);
-  rtc_gpio_pulldown_dis(PIN_I2S_BCK_PROBE);
 
   rtc_gpio_init(PIN_I2S_WS_PROBE);
   rtc_gpio_set_direction(PIN_I2S_WS_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
   rtc_gpio_set_direction_in_sleep(PIN_I2S_WS_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
-  rtc_gpio_pullup_dis(PIN_I2S_WS_PROBE);
-  rtc_gpio_pulldown_dis(PIN_I2S_WS_PROBE);
 
   rtc_gpio_init(PIN_I2S_DIN);
   rtc_gpio_set_direction(PIN_I2S_DIN, RTC_GPIO_MODE_INPUT_ONLY);
   rtc_gpio_set_direction_in_sleep(PIN_I2S_DIN, RTC_GPIO_MODE_INPUT_ONLY);
-  rtc_gpio_pullup_dis(PIN_I2S_DIN);
-  rtc_gpio_pulldown_dis(PIN_I2S_DIN);
+  rtc_gpio_pulldown_en(PIN_I2S_DIN);
 
+if (0) {
   gpio_config(&(gpio_config_t){
     .pin_bit_mask = (1 << PIN_I2S_BCK_PROBE) | (1 << PIN_I2S_WS_PROBE) | (1 << PIN_I2S_DIN),
     .mode = GPIO_MODE_INPUT,
@@ -125,6 +121,7 @@ if (0) {
     ESP_LOGI(TAG, "");
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
+}
 
   extern const uint8_t bin_start[] asm("_binary_ulp_duck_bin_start");
   extern const uint8_t bin_end[]   asm("_binary_ulp_duck_bin_end");
@@ -136,8 +133,15 @@ if (0) {
   while (1) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
     ESP_LOGI(TAG, "Wake up: %" PRId32, ulp_wakeup_count);
-    for (int i = 0; i < 16; i++)
-      ESP_LOGI(TAG, "%2d: %04" PRIx32, i, (&ulp_debug)[i]);
+    const int N = 16;
+    char s[N + 1]; s[N] = '\0';
+    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_WS_PROBE)) ? '*' : ' ';
+    ESP_LOGI(TAG, " WS: %s", s);
+    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_BCK_PROBE)) ? '*' : ' ';
+    ESP_LOGI(TAG, "BCK: %s", s);
+    for (int i = 0; i < N; i++) s[i] = ((&ulp_debug)[i] & (1 << PIN_I2S_DIN)) ? '*' : ' ';
+    ESP_LOGI(TAG, "DIN: %s", s);
+    ESP_LOGI(TAG, "");
 
     led_set_state(LED_STATE_CONN_CHECK, 500);
   /*

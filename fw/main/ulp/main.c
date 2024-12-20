@@ -18,14 +18,20 @@ uint32_t debug[16];
 #pragma GCC optimize("O3")
 uint32_t read()
 {
-  uint32_t t = ULP_RISCV_GET_CCOUNT();
-
   uint32_t b[16];
+
+  // Wait for WS falling edge
+  while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
+  while (((b[0] = REG_READ(RTC_GPIO_IN_REG)) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
+  // for (int i = 0; i < 65; i++) REG_READ(RTC_GPIO_IN_REG);  // Adjusted time
+
+  // uint32_t t = ULP_RISCV_GET_CCOUNT();
+
   #pragma GCC unroll 16
-  for (int i = 0; i < 16; i++)
+  for (int i = 1; i < 16; i++)
     b[i] = REG_READ(RTC_GPIO_IN_REG);
 
-  c1 = ULP_RISCV_GET_CCOUNT() - t;
+  // c1 = ULP_RISCV_GET_CCOUNT() - t;
 
   uint32_t x = 0;
   for (int i = 0; i < 16; i++)
