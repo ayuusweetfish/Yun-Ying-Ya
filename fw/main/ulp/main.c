@@ -27,30 +27,33 @@ uint32_t read()
 
 #if 1
   uint32_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19;
+  uint32_t addr;
 // ', '.join('b%d' % i for i in range(20))
   __asm__ volatile (
-    "lw %[b0], 0(%[addr])\n"
-    "lw %[b1], 0(%[addr])\n"
-    "lw %[b2], 0(%[addr])\n"
-    "lw %[b3], 0(%[addr])\n"
-    "lw %[b4], 0(%[addr])\n"
-    "lw %[b5], 0(%[addr])\n"
-    "lw %[b6], 0(%[addr])\n"
-    "lw %[b7], 0(%[addr])\n"
-    "lw %[b8], 0(%[addr])\n"
-    "lw %[b9], 0(%[addr])\n"
-    "lw %[b10], 0(%[addr])\n"
-    "lw %[b11], 0(%[addr])\n"
-    "lw %[b12], 0(%[addr])\n"
-    "lw %[b13], 0(%[addr])\n"
-    "lw %[b14], 0(%[addr])\n"
-    "lw %[b15], 0(%[addr])\n"
-    "lw %[b16], 0(%[addr])\n"
-    "lw %[b17], 0(%[addr])\n"
-    "lw %[b18], 0(%[addr])\n"
-    "lw %[b19], 0(%[addr])\n"
-// ''.join('"lw %%[b%d], 0(%%[addr])\\n"\n' % i for i in range(20))
-    : [b0] "=&r" (b0)
+    "lui %[addr], 0xa\n"  // Address: 0xa424 (main CPU 0x60008424)
+    "lw %[b0], 0x424(%[addr])\n"
+    "lw %[b1], 0x424(%[addr])\n"
+    "lw %[b2], 0x424(%[addr])\n"
+    "lw %[b3], 0x424(%[addr])\n"
+    "lw %[b4], 0x424(%[addr])\n"
+    "lw %[b5], 0x424(%[addr])\n"
+    "lw %[b6], 0x424(%[addr])\n"
+    "lw %[b7], 0x424(%[addr])\n"
+    "lw %[b8], 0x424(%[addr])\n"
+    "lw %[b9], 0x424(%[addr])\n"
+    "lw %[b10], 0x424(%[addr])\n"
+    "lw %[b11], 0x424(%[addr])\n"
+    "lw %[b12], 0x424(%[addr])\n"
+    "lw %[b13], 0x424(%[addr])\n"
+    "lw %[b14], 0x424(%[addr])\n"
+    "lw %[b15], 0x424(%[addr])\n"
+    "lw %[b16], 0x424(%[addr])\n"
+    "lw %[b17], 0x424(%[addr])\n"
+    "lw %[b18], 0x424(%[addr])\n"
+    "lw %[b19], 0x424(%[addr])\n"
+// ''.join('"lw %%[b%d], 0x424(%%[addr])\\n"\n' % i for i in range(20))
+    : [addr] "=&r" (addr)
+     ,[b0] "=&r" (b0)
      ,[b1] "=&r" (b1)
      ,[b2] "=&r" (b2)
      ,[b3] "=&r" (b3)
@@ -71,7 +74,6 @@ uint32_t read()
      ,[b18] "=&r" (b18)
      ,[b19] "=&r" (b19)
 // ''.join(' ,[b%d] "=&r" (b%d)\n' % (i, i) for i in range(20))
-    : [addr] "r" (RTC_GPIO_IN_REG)
   );
 
   b[0] = b0;
@@ -107,7 +109,7 @@ uint32_t read()
   if (0) for (int i = 0; i < 16; i++)
     x |= (b[i]) << (15 - i);
 
-  for (int i = 0; i < 16; i++)
+  for (int i = 0; i < 20; i++)
     debug[i] = b[i] >> 10;
 
   c1 = ULP_RISCV_GET_CCOUNT() - t;
