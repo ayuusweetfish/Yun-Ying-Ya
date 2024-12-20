@@ -21,6 +21,7 @@ static led_strip_handle_t led_strip;
 #include "driver/ledc.h"
 #include "driver/gpio.h"
 #include "esp_sleep.h"
+#include "soc/ledc_reg.h"
 #endif
 
 static inline void output_tint(float r, float g, float b);
@@ -84,6 +85,7 @@ void led_init()
       .hpoint = 0,
     }));
 
+  // TODO: Move I2S-related setup elsewhere!
   ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
     .duty_resolution = LEDC_TIMER_2_BIT,
@@ -98,6 +100,38 @@ void led_init()
     .gpio_num = PIN_I2S_BCK,
     .duty = 0b10,
   }));
+  ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .duty_resolution = LEDC_TIMER_2_BIT,
+    .timer_num = LEDC_TIMER_2,
+    .freq_hz = 16000,
+    .clk_cfg = LEDC_USE_XTAL_CLK,
+  }));
+  ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_4,
+    .timer_sel = LEDC_TIMER_2,
+    .gpio_num = PIN_I2S_WS,
+    .duty = 0b10,
+  }));
+
+  uint32_t cfg1 = REG_READ(LEDC_LSTIMER1_CONF_REG);
+  uint32_t cfg2 = REG_READ(LEDC_LSTIMER2_CONF_REG);
+  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1 | LEDC_LSTIMER1_RST);
+  REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2 | LEDC_LSTIMER2_RST);
+  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1 & ~LEDC_LSTIMER1_RST);
+  REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2 & ~LEDC_LSTIMER1_RST);
+
+if (0) {
+  uint32_t timer_cnt[4][2];
+  #pragma GCC unroll 4
+  for (int i = 0; i < 4; i++) {
+    timer_cnt[i][0] = REG_READ(LEDC_LSTIMER1_VALUE_REG);
+    timer_cnt[i][1] = REG_READ(LEDC_LSTIMER2_VALUE_REG);
+  }
+  ESP_LOGI(TAG, "CNT 0: %4lu %4lu %4lu %4lu", timer_cnt[0][0], timer_cnt[1][0], timer_cnt[2][0], timer_cnt[3][0]);
+  ESP_LOGI(TAG, "CNT 1: %4lu %4lu %4lu %4lu", timer_cnt[0][1], timer_cnt[1][1], timer_cnt[2][1], timer_cnt[3][1]);
+}
 
   ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_ON));
   for (int i = 0; i < 3; i++) {
@@ -106,6 +140,7 @@ void led_init()
   }
 
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(PIN_I2S_BCK));
+  ESP_ERROR_CHECK(gpio_sleep_sel_dis(PIN_I2S_WS));
 
   ESP_LOGI(TAG, "Initialised LED with PWM controller");
 #endif

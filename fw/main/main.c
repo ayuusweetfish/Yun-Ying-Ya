@@ -15,6 +15,8 @@
 #include "ulp_riscv.h"
 #include "driver/rtc_io.h"
 #include "soc/rtc.h"
+#include "driver/gpio.h"
+#include "soc/gpio_reg.h"
 
 #include "ulp_duck.h"
 
@@ -45,7 +47,7 @@ void app_main(void)
   ESP_ERROR_CHECK(ret);
 
   // Wi-Fi
-if (1) {
+if (0) {
   wifi_init_sta();
   led_set_state(LED_STATE_CONN_CHECK, 500);
   int http_test_result = http_test();
@@ -83,6 +85,47 @@ if (1) {
   rtc_gpio_set_direction_in_sleep(PIN_I2S_BCK_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
   rtc_gpio_pullup_dis(PIN_I2S_BCK_PROBE);
   rtc_gpio_pulldown_dis(PIN_I2S_BCK_PROBE);
+
+  rtc_gpio_init(PIN_I2S_WS_PROBE);
+  rtc_gpio_set_direction(PIN_I2S_WS_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
+  rtc_gpio_set_direction_in_sleep(PIN_I2S_WS_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
+  rtc_gpio_pullup_dis(PIN_I2S_WS_PROBE);
+  rtc_gpio_pulldown_dis(PIN_I2S_WS_PROBE);
+
+  rtc_gpio_init(PIN_I2S_DIN);
+  rtc_gpio_set_direction(PIN_I2S_DIN, RTC_GPIO_MODE_INPUT_ONLY);
+  rtc_gpio_set_direction_in_sleep(PIN_I2S_DIN, RTC_GPIO_MODE_INPUT_ONLY);
+  rtc_gpio_pullup_dis(PIN_I2S_DIN);
+  rtc_gpio_pulldown_dis(PIN_I2S_DIN);
+
+  gpio_config(&(gpio_config_t){
+    .pin_bit_mask = (1 << PIN_I2S_BCK_PROBE) | (1 << PIN_I2S_WS_PROBE) | (1 << PIN_I2S_DIN),
+    .mode = GPIO_MODE_INPUT,
+    .pull_down_en = GPIO_PULLDOWN_ENABLE,
+  });
+  while (1) {
+    const int N = 128;
+    uint32_t in[N];
+    // Wait for WS rising edge
+    while ((REG_READ(GPIO_IN_REG) & (1 << PIN_I2S_WS_PROBE)) != 0) { }
+    while ((REG_READ(GPIO_IN_REG) & (1 << PIN_I2S_WS_PROBE)) == 0) { }
+    // Count 28 BCK pulses
+    for (int i = 0; i < 28; i++) {
+      while ((REG_READ(GPIO_IN_REG) & (1 << PIN_I2S_BCK_PROBE)) == 0) { }
+      while ((REG_READ(GPIO_IN_REG) & (1 << PIN_I2S_BCK_PROBE)) != 0) { }
+    }
+    for (int i = 0; i < N; i++) in[i] = REG_READ(GPIO_IN_REG);
+    char s[N + 1]; s[N] = '\0';
+    for (int i = 0; i < N; i++) s[i] = '0' + ((in[i] >> PIN_I2S_BCK_PROBE) & 1);
+    ESP_LOGI(TAG, "BCK: %s", s);
+    for (int i = 0; i < N; i++) s[i] = '0' + ((in[i] >> PIN_I2S_WS_PROBE) & 1);
+    ESP_LOGI(TAG, " WS: %s", s);
+    for (int i = 0; i < N; i++) s[i] = '0' + ((in[i] >> PIN_I2S_DIN) & 1);
+    ESP_LOGI(TAG, "DIN: %s", s);
+    ESP_LOGI(TAG, "");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+
   extern const uint8_t bin_start[] asm("_binary_ulp_duck_bin_start");
   extern const uint8_t bin_end[]   asm("_binary_ulp_duck_bin_end");
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
@@ -90,13 +133,11 @@ if (1) {
 
   esp_sleep_enable_ulp_wakeup();
 
-  while (0) {
+  while (1) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
     ESP_LOGI(TAG, "Wake up: %" PRId32, ulp_wakeup_count);
-    char s[17];
-    for (int i = 0; i < 16; i++) s[i] = '0' + ((ulp_c0 >> (15 - i)) & 1);
-    s[16] = '\0';
-    ESP_LOGI(TAG, "read: %s, cycles: %" PRIu32 ", total: %10" PRIu32, s, ulp_c1, ulp_c2);
+    for (int i = 0; i < 16; i++)
+      ESP_LOGI(TAG, "%2d: %04" PRIx32, i, (&ulp_debug)[i]);
 
     led_set_state(LED_STATE_CONN_CHECK, 500);
   /*
