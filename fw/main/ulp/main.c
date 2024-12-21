@@ -27,7 +27,8 @@ uint32_t read()
 
 #if 1
   uint32_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11,
-           b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23;
+           b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23,
+           b24, b25, b26, b27, b28, b29, b30, b31;
   uint32_t addr;
 // ', '.join('b%d' % i for i in range(20))
   __asm__ volatile (
@@ -56,6 +57,8 @@ uint32_t read()
     "lw %[b21], 0x424(%[addr])\n"
     "lw %[b22], 0x424(%[addr])\n"
     "lw %[b23], 0x424(%[addr])\n"
+    "lw %[b24], 0x424(%[addr])\n"
+    "lw %[b25], 0x424(%[addr])\n"
 // ''.join('"lw %%[b%d], 0x424(%%[addr])\\n"\n' % i for i in range(20))
     : [addr] "=&r" (addr)
      ,[b0] "=&r" (b0)
@@ -82,6 +85,8 @@ uint32_t read()
      ,[b21] "=&r" (b21)
      ,[b22] "=&r" (b22)
      ,[b23] "=&r" (b23)
+     ,[b24] "=&r" (b24)
+     ,[b25] "=&r" (b25)
 // ''.join(' ,[b%d] "=&r" (b%d)\n' % (i, i) for i in range(20))
   );
 
@@ -109,6 +114,8 @@ uint32_t read()
   b[21] = b21;
   b[22] = b22;
   b[23] = b23;
+  b[24] = b24;
+  b[25] = b25;
 // ''.join('b[%d] = b%d;\n' % (i, i) for i in range(20))
 
 #else
@@ -117,19 +124,6 @@ uint32_t read()
     b[i] = REG_READ(RTC_GPIO_IN_REG);
 
 #endif
-
-if (0) {
-  uint32_t ws = 0, bck = 0, din = 0;
-  #pragma GCC unroll 24
-  for (int i = 0; i < 24; i++) ws  = (ws  << 1) | ((b[i] >> (10 + PIN_I2S_WS_PROBE)) & 1);
-  #pragma GCC unroll 24
-  for (int i = 0; i < 24; i++) bck = (bck << 1) | ((b[i] >> (10 + PIN_I2S_BCK_PROBE)) & 1);
-  #pragma GCC unroll 24
-  for (int i = 0; i < 24; i++) din = (din << 1) | ((b[i] >> (10 + PIN_I2S_DIN)) & 1);
-  debug[0] = ws;
-  debug[1] = bck;
-  debug[2] = din;
-}
 
   uint32_t x = 0;
   uint32_t n = 0;
@@ -159,7 +153,7 @@ int main()
   ulp_riscv_gpio_init(PIN_I2S_DIN);
   uint32_t t = ULP_RISCV_GET_CCOUNT();
   while (1) {
-    t += 1000 * 20000;
+    t += 4000 * 20000;
     while (ULP_RISCV_GET_CCOUNT() - t >= 0x80000000) { }
     c0 = read();
     wakeup_count++;

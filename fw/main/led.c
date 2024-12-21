@@ -369,21 +369,23 @@ void led_set_state(enum led_state_t state, int transition)
   since = 0;
 
   xSemaphoreGive(led_mutex);
-  // vTaskResume(led_task_handle);
-  xSemaphoreGive(led_sleep_signal);
+  vTaskResume(led_task_handle);
+  // xSemaphoreGive(led_sleep_signal);
+  // TODO: Actually use semaphores after investigating the power consumption issue
 }
 
 static inline struct tint state_render(enum led_state_t state, int time)
 {
   switch (state) {
   case LED_STATE_IDLE:
-    return (struct tint){ 0.2f, 0.2f, 0 };
+    // return (struct tint){ 0.2f, 0.2f, 0 };
     return (struct tint){ 0, 0, 0 };
 
   case LED_STATE_STARTUP:
     return (struct tint){ 0.2f, 0.2f, 0 };
 
   case LED_STATE_CONN_CHECK:
+    // return (struct tint){ 0, 0, 0 };
     return (struct tint){ 0, 0, 1 };
 
   case LED_STATE_SPEECH:
@@ -442,8 +444,8 @@ void led_task_fn(void *_unused)
     output_tint(t.r, t.g, t.b);
 
     if (suspend_task) {
-      // vTaskSuspend(led_task_handle);
-      xSemaphoreTake(led_sleep_signal, portMAX_DELAY);
+      vTaskSuspend(led_task_handle);
+      // xSemaphoreTake(led_sleep_signal, portMAX_DELAY);
     }
     vTaskDelay(INTERVAL / portTICK_PERIOD_MS);
   }
