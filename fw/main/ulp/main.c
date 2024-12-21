@@ -166,21 +166,29 @@ int main()
   // Wait for WS rising edge
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
+  int block = 0;
+  int successive = 0;
   while (1) {
     uint32_t rms = 0;
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < 64; i++) {
       uint32_t sample = read();
       audio_buf[i] = sample;
       int32_t s16 = (int32_t)(int16_t)sample;
       rms += s16 * s16;
     }
-    if (rms >= 256 * 40000) {
-    // if ((wakeup_count = (wakeup + 1) % 125) == 0) {
-      c0 = audio_buf[0];
-      c2 = rms;
-      wakeup_count++;
-      wakeup_signal = 1;
-      ulp_riscv_wakeup_main_processor();
+    if (rms >= 64 * 10000) {
+      if (++successive >= 4) {
+        if (successive >= 6) successive = 6;
+        c0 = audio_buf[0];
+        c2 = rms;
+        wakeup_count++;
+        wakeup_signal = 1;
+        ulp_riscv_wakeup_main_processor();
+      }
+    } else {
+      successive -= 2;
+      if (successive < 0) successive = 0;
     }
+    block = (block + 128) % 256;
   }
 }
