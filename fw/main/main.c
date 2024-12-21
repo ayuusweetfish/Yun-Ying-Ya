@@ -47,7 +47,7 @@ void app_main(void)
   ESP_ERROR_CHECK(ret);
 
   // Wi-Fi
-if (0) {
+if (1) {
   wifi_init_sta();
   led_set_state(LED_STATE_CONN_CHECK, 500);
   int http_test_result = http_test();
@@ -132,16 +132,17 @@ if (0) {
 
   while (1) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
-    ESP_LOGI(TAG, "Wake up: %" PRIu32 " %04" PRIx32 " %" PRIu32, ulp_wakeup_count, ulp_c0, ulp_c1);
+    ESP_LOGI(TAG, "Wake up: %" PRIu32 " %04" PRIx32 " %" PRIu32 " %10" PRIu32, ulp_wakeup_count, ulp_c0, ulp_c1, ulp_c2);
     // ~800 cycles for 24 bits
 
-    led_set_state(LED_STATE_CONN_CHECK, 500);
+    led_set_state(LED_STATE_CONN_CHECK, 200);
   /*
     int http_test_result = http_test();
     printf("HTTP test result: %d\n", http_test_result);
   */
-    vTaskDelay(500 / portTICK_PERIOD_MS);
-    led_set_state(LED_STATE_IDLE, 500);
+    vTaskDelay(200 / portTICK_PERIOD_MS);
+    led_set_state(LED_STATE_IDLE, 200);
+    vTaskDelay(200 / portTICK_PERIOD_MS);
   }
 
   // I2S input

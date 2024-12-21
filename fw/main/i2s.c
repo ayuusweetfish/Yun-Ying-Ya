@@ -11,7 +11,9 @@ static i2s_chan_handle_t rx_chan;
 
 void i2s_init()
 {
-  i2s_chan_config_t rx_chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
+  i2s_chan_config_t rx_chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(
+    I2S_NUM_AUTO,
+    PIN_I2S_IS_MASTER ? I2S_ROLE_MASTER : I2S_ROLE_SLAVE);
   ESP_ERROR_CHECK(i2s_new_channel(&rx_chan_cfg, NULL, &rx_chan));
 
   i2s_std_config_t rx_std_cfg = {
@@ -23,8 +25,8 @@ void i2s_init()
     .gpio_cfg = {
       .mclk = I2S_GPIO_UNUSED,
       .dout = I2S_GPIO_UNUSED,
-      .bclk = PIN_I2S_BCK,
-      .ws   = PIN_I2S_WS,
+      .bclk = PIN_I2S_IS_MASTER ? PIN_I2S_BCK : PIN_I2S_BCK_PROBE,
+      .ws   = PIN_I2S_IS_MASTER ? PIN_I2S_WS  : PIN_I2S_WS_PROBE,
       .din  = PIN_I2S_DIN,
 
       .invert_flags = {

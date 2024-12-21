@@ -96,8 +96,14 @@ void audio_task(void *_unused)
     if (feed_count >= fetch_chunksize) {
       afe_fetch_result_t *fetch_result = afe_handle->fetch(afe_data);
       static int n = 0;
-      if ((n = (n + 1) % 16) == 15)
-        ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f", fetch_result->data_size, fetch_result->data_volume);
+      if ((n = (n + 1) % 16) == 15) {
+        uint32_t rms = 0;
+        for (int i = 0; i < buf_count; i++) {
+          int32_t sample = buf16[i];
+          rms += sample * sample;
+        }
+        ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f, sample = %08x, RMS = %u", fetch_result->data_size, fetch_result->data_volume, (int)buf32[0], (unsigned)(rms / buf_count));
+      }
       if (fetch_result->wakeup_state == WAKENET_DETECTED) {
         wake_state = 1;
       }

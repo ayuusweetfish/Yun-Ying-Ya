@@ -14,14 +14,16 @@ uint32_t wakeup_signal = 0;
 uint32_t c0 = 0, c1 = 0, c2 = 0;
 uint32_t debug[32];
 
+uint32_t audio_buf[256];
+
 #pragma GCC push_options
 #pragma GCC optimize("O3")
 uint32_t read()
 {
-  uint32_t b[24];
+  uint32_t b[26];
 
   // Wait for WS falling edge
-  while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
+  // while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
   uint32_t t = ULP_RISCV_GET_CCOUNT();
 
@@ -127,8 +129,8 @@ uint32_t read()
 
   uint32_t x = 0;
   uint32_t n = 0;
-  #pragma GCC unroll 24
-  for (int i = 0; i < 24; i++) {
+  #pragma GCC unroll 26
+  for (int i = 0; i < 26; i++) {
     if (
       ((b[i] >> (10 + PIN_I2S_BCK_PROBE)) & 1) &&
       (i == 0 || !((b[i - 1] >> (10 + PIN_I2S_BCK_PROBE)) & 1))
@@ -152,12 +154,33 @@ int main()
   ulp_riscv_gpio_init(PIN_I2S_WS_PROBE);
   ulp_riscv_gpio_init(PIN_I2S_DIN);
   uint32_t t = ULP_RISCV_GET_CCOUNT();
-  while (1) {
+  while (0) {
     t += 4000 * 20000;
     while (ULP_RISCV_GET_CCOUNT() - t >= 0x80000000) { }
     c0 = read();
     wakeup_count++;
     wakeup_signal = 1;
     ulp_riscv_wakeup_main_processor();
+  }
+
+  // Wait for WS rising edge
+  while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
+  while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
+  while (1) {
+    uint32_t rms = 0;
+    for (int i = 0; i < 256; i++) {
+      uint32_t sample = read();
+      audio_buf[i] = sample;
+      int32_t s16 = (int32_t)(int16_t)sample;
+      rms += s16 * s16;
+    }
+    if (rms >= 256 * 40000) {
+    // if ((wakeup_count = (wakeup + 1) % 125) == 0) {
+      c0 = audio_buf[0];
+      c2 = rms;
+      wakeup_count++;
+      wakeup_signal = 1;
+      ulp_riscv_wakeup_main_processor();
+    }
   }
 }
