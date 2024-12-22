@@ -29,7 +29,6 @@ static void led_task_fn(void *_unused);
 
 static TaskHandle_t led_task_handle;
 static SemaphoreHandle_t led_mutex;
-static SemaphoreHandle_t led_sleep_signal;
 
 void led_init()
 {
@@ -141,8 +140,6 @@ void led_init()
   // Create lock
   led_mutex = xSemaphoreCreateMutex();
   assert(led_mutex != NULL);
-  led_sleep_signal = xSemaphoreCreateBinary();
-  assert(led_mutex != NULL);
   // High-priority
   xTaskCreate(led_task_fn, "LED task", 4096, NULL, 8, &led_task_handle);
 }
@@ -155,18 +152,12 @@ static inline void output_tint(float r, float g, float b)
 #endif
 
 #if USE_LED_PWM
-if (1) {
   ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (1 << 11) - (int)roundf(r * (1 << 11)));
   ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, (1 << 11) - (int)roundf(g * (1 << 11)));
   ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, (1 << 11) - (int)roundf(b * (1 << 11)));
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
-} else {
-  gpio_set_level(17, !(r >= 0.5f));
-  gpio_set_level(18, !(g >= 0.5f));
-  gpio_set_level(21, !(b >= 0.5f));
-}
 #endif
 }
 
@@ -335,17 +326,15 @@ and then the update task goes to sleep.
 
 Step 2.
 A binary semaphore solves the problem, but the current consumption is higher
-with the semaphore compared to `vTaskSuspend()`; light sleep seems to be
-activated less frequently due to `ulTaskNotifyTake()` blocking not being treated
-as a completely inactive thread (suspectedly due to the timeout, although it's
-set to `portMAX_DELAY`).
+with the semaphore compared to `vTaskSuspend()` (by ~4 mA); light sleep seems
+to be entered less frequently due to `xSemaphoreTake()` and `ulTaskNotifyTake()`
+blocking not being treated as a completely suspended thread (suspectedly
+due to the timeout, although it's set to `portMAX_DELAY` and while FreeRTOS docs
+mention `INCLUDE_vTaskSuspend` in this case, the task does not actually
+enter the suspended state -- blocked state instead).
 
-We currently use `xSemaphoreTake()`, which correctly puts the task to
-suspended state. FreeRTOS documentation also mentions this behaviour;
-this is not present in `ulTaskNotifyTake()`, though the following source trace
-points to it being equivalent.
-
-The ammeter is broken, let's delay the measurement for later T-T
+As the frame refresh task is of high priority, we simply check whether it is
+running and yield if positive. Actually, it's like a type of mutex lock ^ ^
 
 Ref (in esp-idf/components/freertos/FreeRTOS-Kernel):
   include/freertos/semphr.h: xSemaphoreTake()
@@ -369,9 +358,9 @@ void led_set_state(enum led_state_t state, int transition)
   since = 0;
 
   xSemaphoreGive(led_mutex);
+
+  while (eTaskGetState(led_task_handle) == eRunning) taskYIELD();
   vTaskResume(led_task_handle);
-  // xSemaphoreGive(led_sleep_signal);
-  // TODO: Actually use semaphores after investigating the power consumption issue
 }
 
 static inline struct tint state_render(enum led_state_t state, int time)
@@ -445,7 +434,6 @@ void led_task_fn(void *_unused)
 
     if (suspend_task) {
       vTaskSuspend(led_task_handle);
-      // xSemaphoreTake(led_sleep_signal, portMAX_DELAY);
     }
     vTaskDelay(INTERVAL / portTICK_PERIOD_MS);
   }
