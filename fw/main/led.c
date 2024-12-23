@@ -117,10 +117,11 @@ void led_init()
   // Reset counters to minimise desync
   uint32_t cfg1 = REG_READ(LEDC_LSTIMER1_CONF_REG);
   uint32_t cfg2 = REG_READ(LEDC_LSTIMER2_CONF_REG);
-  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1 | LEDC_LSTIMER1_RST);
+  // WS needs to fall before/in sync with BCK, not after, so reset timer 1 first
   REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2 | LEDC_LSTIMER2_RST);
-  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1 & ~LEDC_LSTIMER1_RST);
+  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1 | LEDC_LSTIMER1_RST);
   REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2 & ~LEDC_LSTIMER1_RST);
+  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1 & ~LEDC_LSTIMER1_RST);
 
   ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_ON));
   for (int i = 0; i < 3; i++) {
