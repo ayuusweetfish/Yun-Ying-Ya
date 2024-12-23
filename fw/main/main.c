@@ -47,7 +47,7 @@ void app_main(void)
   ESP_ERROR_CHECK(ret);
 
   // Wi-Fi
-if (1) {
+if (0) {
   wifi_init_sta();
   led_set_state(LED_STATE_CONN_CHECK, 500);
   int http_test_result = http_test();
@@ -119,6 +119,7 @@ if (0) {
     for (int i = 0; i < N; i++) s[i] = '0' + ((in[i] >> PIN_I2S_DIN) & 1);
     ESP_LOGI(TAG, "DIN: %s", s);
     ESP_LOGI(TAG, "");
+    for (int i = 0; i < 10; i++) vTaskDelay(1); // Prevent auto light sleep for a while
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }

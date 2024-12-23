@@ -87,7 +87,7 @@ void audio_task(void *_unused)
     ESP_ERROR_CHECK(i2s_read(buf32, &n, buf_count));
     if (n == buf_count) {
       // ESP-SR calls for 16-bit samples, convert here
-      for (int i = 0; i < buf_count; i++) buf16[i] = buf32[i] >> 16;
+      for (int i = 0; i < buf_count; i++) buf16[i] = buf32[i] >> 15;  // ??
       afe_handle->feed(afe_data, buf16);
       n = 0;
       feed_count += buf_count;

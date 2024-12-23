@@ -176,11 +176,11 @@ int main()
       int32_t s16 = (int32_t)(int16_t)sample;
       rms += s16 * s16;
     }
+    c0 = audio_buf[0];
+    c2 = rms;
     if (rms >= 64 * 10000) {
       if (++successive >= 4) {
         if (successive >= 6) successive = 6;
-        c0 = audio_buf[0];
-        c2 = rms;
         wakeup_count++;
         wakeup_signal = 1;
         ulp_riscv_wakeup_main_processor();
