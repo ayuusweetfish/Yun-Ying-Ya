@@ -85,6 +85,13 @@ void led_init()
     }));
 
   // TODO: Move I2S-related setup elsewhere!
+if (0) {
+  // Work around bit timing issue after reset?
+  gpio_set_direction(PIN_I2S_BCK, GPIO_MODE_DISABLE);
+  gpio_set_direction(PIN_I2S_WS, GPIO_MODE_DISABLE);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
+}
+
   ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
     .duty_resolution = LEDC_TIMER_2_BIT,
