@@ -17,8 +17,6 @@
 #include "driver/gpio.h"
 #include "soc/gpio_reg.h"
 #include "soc/rtc.h"
-#include "hal/gpio_hal.h"   // gpio_hal_iomux_func_sel
-#include "hal/rtc_io_hal.h" // rtcio_hal_function_select
 
 #include "ulp_duck.h"
 
@@ -83,6 +81,9 @@ if (0) {
   // I2S input
   i2s_init();
 
+  // Audio processing
+  audio_init();
+
   rtc_clk_fast_src_set(SOC_RTC_FAST_CLK_SRC_XTAL_D2);
 
   rtc_gpio_init(PIN_I2S_BCK_PROBE);
@@ -141,28 +142,20 @@ if (0) {
     ESP_LOGI(TAG, "Wake up: %" PRIu32 " %04" PRIx32 " %" PRIu32 " %10" PRIu32, ulp_wakeup_count, ulp_c0, ulp_c1, ulp_c2);
     // ~800 cycles for 24 bits
 
-    if (0) gpio_hal_iomux_func_sel(GPIO_PIN_MUX_REG[PIN_I2S_DIN], PIN_FUNC_GPIO);
-    ESP_ERROR_CHECK(i2s_enable());
     led_set_state(LED_STATE_CONN_CHECK, 200);
   /*
     int http_test_result = http_test();
     printf("HTTP test result: %d\n", http_test_result);
   */
-    vTaskDelay(500 / portTICK_PERIOD_MS);
-    int32_t buf[8];
-    size_t n = 0;
-    ESP_ERROR_CHECK(i2s_read(buf, &n, sizeof buf / sizeof buf[0]));
-    ESP_LOGI(TAG, "Read %zu", n);
-    ESP_LOG_BUFFER_HEX(TAG, buf, sizeof buf);
+    audio_resume();
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
 
-    ESP_ERROR_CHECK(i2s_disable());
-    if (0) rtcio_hal_function_select(rtc_io_number_get(PIN_I2S_DIN), RTCIO_LL_FUNC_RTC);
     led_set_state(LED_STATE_IDLE, 200);
+    audio_pause();
     vTaskDelay(200 / portTICK_PERIOD_MS);
-  }
 
-  // Audio processing
-  audio_init();
+    xQueueReset((QueueHandle_t)sem_ulp);
+  }
 
   ESP_ERROR_CHECK(i2s_enable());
 

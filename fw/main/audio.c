@@ -24,6 +24,8 @@ static esp_afe_sr_data_t *afe_data = NULL;
 
 static void audio_task(void *_unused);
 
+static TaskHandle_t audio_task_handle;
+
 void audio_init()
 {
   srmodel_list_t *models = esp_srmodel_init("model");
@@ -49,7 +51,7 @@ void audio_init()
     return;
   }
 
-  xTaskCreate(audio_task, "audio_task", 16384, NULL, 5, NULL);
+  xTaskCreate(audio_task, "audio_task", 16384, NULL, 5, &audio_task_handle);
 }
 
 static int wake_state = 0;
@@ -82,7 +84,13 @@ void audio_task(void *_unused)
   int16_t *buf16 = malloc(sizeof(int16_t) * buf_count);
   int feed_count = 0;
   while (1) {
-    ESP_ERROR_CHECK(i2s_read(buf32, &n, buf_count));
+    if (xTaskNotifyWait(0, 0, NULL, 0)) {
+      ESP_ERROR_CHECK(i2s_disable());
+      vTaskSuspend(audio_task_handle);
+    }
+    if (i2s_read(buf32, &n, buf_count) != ESP_OK) {
+      vTaskDelay(1);
+    }
     if (n == buf_count) {
       // ESP-SR calls for 16-bit samples, convert here
       for (int i = 0; i < buf_count; i++) buf16[i] = buf32[i] >> 16;
@@ -103,6 +111,7 @@ void audio_task(void *_unused)
         ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f, sample = %08x, RMS = %u", fetch_result->data_size, fetch_result->data_volume, (int)buf32[0], (unsigned)(rms / buf_count));
       }
       if (fetch_result->wakeup_state == WAKENET_DETECTED) {
+        ESP_LOGI(TAG, "Wake word detected");
         wake_state = 1;
       }
       // XXX: Debug use
@@ -124,6 +133,19 @@ void audio_task(void *_unused)
       }
     }
   }
+}
+
+void audio_pause()
+{
+  // `vTaskSuspend()` followed by `i2s_disable()` hangs,
+  // supposedly due to unresolved blocks
+  xTaskNotify(audio_task_handle, 0, eNoAction);
+}
+
+void audio_resume()
+{
+  ESP_ERROR_CHECK(i2s_enable());
+  vTaskResume(audio_task_handle);
 }
 
 int audio_wake_state()
