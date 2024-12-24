@@ -20,6 +20,7 @@ int http_test();
 
 void i2s_init();
 esp_err_t i2s_enable();
+esp_err_t i2s_disable();
 esp_err_t i2s_read(int32_t *buf, size_t *n, size_t max_n);
 
 void audio_init();

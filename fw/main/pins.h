@@ -20,6 +20,7 @@
   #define PIN_I2S_WS_PROBE  8
   #define PIN_I2S_LR 1
   #define PIN_I2S_IS_MASTER 1
+  #define PIN_MIC_EN  15
 #else
   #define PIN_I2S_BCK  1
   #define PIN_I2S_WS   5
@@ -28,4 +29,5 @@
   #define PIN_I2S_WS_PROBE  4
   #define PIN_I2S_LR 0
   #define PIN_I2S_IS_MASTER 0
+  #undef  PIN_MIC_EN
 #endif

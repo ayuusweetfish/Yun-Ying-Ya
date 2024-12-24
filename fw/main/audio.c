@@ -76,8 +76,6 @@ void audio_task(void *_unused)
   assert(total_nch == 1);
   ESP_LOGI(TAG, "feed task start, feed_chunksize = %d, total_nch = %d, fetch_chunksize = %d", feed_chunksize, total_nch, fetch_chunksize);
 
-  ESP_ERROR_CHECK(i2s_enable());
-
   size_t buf_count = feed_chunksize * total_nch;
   size_t n = 0;
   int32_t *buf32 = malloc(sizeof(int32_t) * buf_count);

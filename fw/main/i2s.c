@@ -40,15 +40,12 @@ void i2s_init()
   rx_std_cfg.slot_cfg.slot_mask = (PIN_I2S_LR ? I2S_STD_SLOT_RIGHT : I2S_STD_SLOT_LEFT);
   ESP_ERROR_CHECK(i2s_channel_init_std_mode(rx_chan, &rx_std_cfg));
 
-#if 0
-  gpio_set_pull_mode(GPIO_NUM_17, GPIO_PULLDOWN_ONLY);
-#else
-  gpio_set_pull_mode(GPIO_NUM_13, GPIO_PULLDOWN_ONLY);
+#ifdef PIN_MIC_EN
   gpio_config(&(gpio_config_t){
-    .pin_bit_mask = (1 << 15),
+    .pin_bit_mask = (1 << PIN_MIC_EN),
     .mode = GPIO_MODE_OUTPUT,
   });
-  gpio_set_level(15, 1);
+  gpio_set_level(PIN_MIC_EN, 1);
 #endif
 
   ESP_LOGI(TAG, "I2S input initialised");
@@ -57,6 +54,11 @@ void i2s_init()
 esp_err_t i2s_enable()
 {
   return i2s_channel_enable(rx_chan);
+}
+
+esp_err_t i2s_disable()
+{
+  return i2s_channel_disable(rx_chan);
 }
 
 esp_err_t i2s_read(int32_t *buf, size_t *n, size_t max_n)
