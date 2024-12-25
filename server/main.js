@@ -48,7 +48,7 @@ const serveReq = async (req) => {
         audioBlocks.push(value)
       }
     } catch (e) {
-      console.log(`Error reading response: ${e.message}`)
+      console.log(`Error reading request: ${e.message} ${e.stack}`)
     }
     const combinedAudio = new Uint8Array(Buffer.concat(audioBlocks))
     try {
@@ -58,7 +58,7 @@ const serveReq = async (req) => {
       const assembly = await answerAssembly(t0, combinedAudio, pedestrianMessage)
       return new Response(assembly)
     } catch (e) {
-      console.log(`Internal server error: ${e}`)
+      console.log(`Internal server error: ${e} ${e.stack}`)
       return new Response(e.message, { status: 500 })
     }
   } else if (req.method === 'POST' && url.pathname === '/message' && debug) {

@@ -48,6 +48,7 @@ export const logInteractionFill = async (rowid, description, program, assembly) 
 /*
   To extract audio recordings:
 
-  sqlite3 log.db "SELECT writefile(timestamp || '.pcm', audio) FROM interactions WHERE length(audio) > 0"
+  sqlite3 log.db "SELECT writefile(timestamp || '.pcm', audio) FROM interactions WHERE length(audio) > 0 ORDER BY rowid DESC LIMIT 5"
+  rsync --remove-source-files ssh_host:/path/to/duck/server/*.pcm .
   for i in [0-9]*.pcm; do ffmpeg -ar 16000 -f s16le -acodec pcm_s16le -i $i ${i%.pcm}.wav && rm $i; done
 */

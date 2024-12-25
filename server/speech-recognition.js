@@ -45,6 +45,8 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
   let endPromiseResolve = null  // For the `end()` call
   let endPromiseTimer = null
 
+  let expectedClose = false
+
   const ws = new WebSocket(url)
   ws.onopen = (ev) => {
     console.log('open')
@@ -52,14 +54,16 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
     promiseFinished = true
   }
   ws.onclose = (ev) => {
-    console.log('close')
+    console.log('close', ev.code, ev.reason, ev.wasClean)
+    if (!expectedClose) console.log('unexpected close')
   }
   ws.onerror = (ev) => {
     console.log('error', ev.message)
     if (!promiseFinished) {
-      reject(ev.message)
+      reject(new Error(ev.message))
       promiseFinished = true
     }
+    expectedClose = true
     ws.close()
   }
   ws.onmessage = (ev) => {
@@ -75,6 +79,8 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
           clearTimeout(endPromiseTimer)
           endPromiseResolve(recognitionResult.join(''))
         }
+        console.log(`closing due to returned data reporting status === 2! (${recognitionResult.join('')})`)
+        expectedClose = true
         ws.close()
       }
     } catch (e) {
@@ -83,10 +89,18 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
     }
   }
 
+  setTimeout(() => {
+    if (!promiseFinished) {
+      reject(new Error('Cannot connect to speech recognition server'))
+      promiseFinished = true
+      expectedClose = true
+      ws.close()
+    }
+  }, 5000)
+
   let first = true
   const sendAudio = (pcm, last) => {
     if (pcm.length === 0 && !last) { return }
-    console.log('send audio', pcm.length, !!last, Date.now())
     const o = {
       data: {
         status: 1,
@@ -109,6 +123,11 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
     }
     if (last) {
       o.data.status = 2
+    }
+    console.log('send audio', pcm.length, !!last, Date.now(), o.data.status)
+    if (ws.readyState !== WebSocket.OPEN) {
+      console.log('sending to closed connection?')
+      return
     }
     ws.send(JSON.stringify(o))
   }
@@ -135,6 +154,7 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
     endPromiseTimer = setTimeout(() => {
       if (endPromiseTimer !== null) {
         endPromiseResolve = null
+        expectedClose = true
         ws.close()
         reject(new Error('Server did not return valid recognition results in time'))
       }
