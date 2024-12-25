@@ -46,6 +46,7 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
   let endPromiseTimer = null
 
   let expectedClose = false
+  let remoteEarlyFinish = false
 
   const ws = new WebSocket(url)
   ws.onopen = (ev) => {
@@ -78,8 +79,9 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
         if (endPromiseResolve) {
           clearTimeout(endPromiseTimer)
           endPromiseResolve(recognitionResult.join(''))
+        } else {
+          remoteEarlyFinish = true
         }
-        console.log(`closing due to returned data reporting status === 2! (${recognitionResult.join('')})`)
         expectedClose = true
         ws.close()
       }
@@ -101,6 +103,7 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
   let first = true
   const sendAudio = (pcm, last) => {
     if (pcm.length === 0 && !last) { return }
+    if (remoteEarlyFinish) { return }
     const o = {
       data: {
         status: 1,
@@ -125,10 +128,6 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
       o.data.status = 2
     }
     console.log('send audio', pcm.length, !!last, Date.now(), o.data.status)
-    if (ws.readyState !== WebSocket.OPEN) {
-      console.log('sending to closed connection?')
-      return
-    }
     ws.send(JSON.stringify(o))
   }
 
@@ -150,6 +149,10 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
   }
 
   const end = () => new Promise((resolve, reject) => {
+    if (remoteEarlyFinish) {
+      resolve(recognitionResult.join(''))
+      return
+    }
     endPromiseResolve = resolve
     endPromiseTimer = setTimeout(() => {
       if (endPromiseTimer !== null) {

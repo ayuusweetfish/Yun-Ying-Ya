@@ -188,6 +188,7 @@ if (0) {
       }
     }
     if (state == STATE_SPEECH) {
+      bool is_ended = audio_speech_ended();
       int n = audio_speech_buffer_size();
       printf("Speech buffer size %d\n", n);
       // Send new samples to the server
@@ -195,7 +196,7 @@ if (0) {
         post_write(p, audio_speech_buffer() + last_sent, (n - last_sent) * sizeof(int16_t));
         last_sent = n;
       }
-      if (audio_speech_ended()) {
+      if (is_ended) {
         state = STATE_LISTEN;
         const char *s = post_finish(p);
         printf("Result: %s\n", s != NULL ? s : "(null)");
