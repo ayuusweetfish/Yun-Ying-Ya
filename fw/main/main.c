@@ -38,6 +38,18 @@ void app_main(void)
     .light_sleep_enable = true,
   }));
 
+  // Battery fuel gauge
+  gauge_init();
+  while (1) {
+    gauge_wake();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    struct gauge_state s = gauge_query();
+    ESP_LOGI(TAG, "VCELL = %" PRIu32 " uV, fuel = %" PRIu32 ", discharge = %" PRIu32,
+      s.voltage, s.fuel, s.discharge);
+    gauge_sleep();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+
   // NVS
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {

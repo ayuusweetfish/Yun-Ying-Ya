@@ -31,3 +31,11 @@
   #define PIN_I2S_IS_MASTER 0
   #undef  PIN_MIC_EN
 #endif
+
+#if BOARD_REV == 1
+  #define PIN_I2C_SCL 36
+  #define PIN_I2C_SDA 35
+#else
+  #define PIN_I2C_SCL 20
+  #define PIN_I2C_SDA 19
+#endif
