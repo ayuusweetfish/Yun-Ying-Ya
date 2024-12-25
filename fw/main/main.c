@@ -139,7 +139,7 @@ if (0) {
 
   while (0) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
-    ESP_LOGI(TAG, "Wake up: %" PRIu32 " %04" PRIx32 " %" PRIu32 " %10" PRIu32, ulp_wakeup_count, ulp_c0, ulp_c1, ulp_c2);
+    ESP_LOGI(TAG, "Wake up: %" PRIu32 " %04" PRIx32 " %" PRIu32 " power=%10" PRIu32 " background=%10" PRIu32, ulp_wakeup_count, ulp_c0, ulp_c1, ulp_c2, ulp_c3);
     // ~800 cycles for 24 bits
 
     led_set_state(LED_STATE_CONN_CHECK, 200);

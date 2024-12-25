@@ -11,7 +11,7 @@
 uint32_t wakeup_count = 0;
 uint32_t wakeup_signal = 0;
 
-uint32_t c0 = 0, c1 = 0, c2 = 0;
+uint32_t c0 = 0, c1 = 0, c2 = 0, c3 = 0;
 uint32_t debug[32];
 
 uint32_t audio_buf[256];
@@ -149,7 +149,7 @@ uint32_t read()
 
 int main()
 {
-  wakeup_signal = wakeup_count = c0 = c1 = c2 = debug[0] = 0;
+  wakeup_signal = wakeup_count = c0 = c1 = c2 = c3 = debug[0] = 0;
   ulp_riscv_gpio_init(PIN_I2S_BCK_PROBE);
   ulp_riscv_gpio_init(PIN_I2S_WS_PROBE);
   ulp_riscv_gpio_init(PIN_I2S_DIN);
@@ -168,20 +168,27 @@ int main()
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
   int block = 0;
   int successive = 0;
+  uint32_t background_power = 0x80000000;
   while (1) {
-    uint32_t rms = 0;
+    uint32_t power = 0;
     for (int i = 0; i < 64; i++) {
       uint32_t sample = read();
       audio_buf[i] = sample;
       int32_t s16 = (int32_t)(int16_t)sample;
-      rms += s16 * s16;
+      power += (uint32_t)(s16 * s16) / 64;
     }
-    c0 = audio_buf[0];
-    c2 = rms;
-    if (rms >= 64 * 250000) {
+    if (power < background_power) {
+      background_power -= (background_power - power) / 16;
+    } else {
+      background_power += (power - background_power) / 8192;
+      // Time constant = 64 * 8192 / 16e3 = 32.768 s
+    }
+    // c0 = audio_buf[0];
+    c2 = power;
+    c3 = background_power;
+    if (power >= 64 * 250000 / 64) {
       if (++successive >= 4) {
         if (successive >= 6) successive = 6;
-        wakeup_count++;
         wakeup_signal = 1;
         ulp_riscv_wakeup_main_processor();
       }
