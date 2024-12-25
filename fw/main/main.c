@@ -138,6 +138,7 @@ if (0) {
   esp_sleep_enable_ulp_wakeup();
 
   while (0) {
+    static bool n_first = false; if (!n_first) { n_first = true; audio_pause(); }
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
     ESP_LOGI(TAG, "Wake up: %" PRIu32 " %04" PRIx32 " %" PRIu32 " power=%10" PRIu32 " background=%10" PRIu32, ulp_wakeup_count, ulp_c0, ulp_c1, ulp_c2, ulp_c3);
     // ~800 cycles for 24 bits

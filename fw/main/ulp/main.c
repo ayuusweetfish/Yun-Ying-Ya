@@ -186,7 +186,7 @@ int main()
     // c0 = audio_buf[0];
     c2 = power;
     c3 = background_power;
-    if (power >= 64 * 250000 / 64) {
+    if (power >= 64 * 160000 / 64) {
       if (++successive >= 4) {
         if (successive >= 6) successive = 6;
         wakeup_signal = 1;

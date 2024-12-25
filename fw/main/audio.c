@@ -162,7 +162,8 @@ void audio_task(void *_unused)
         if (audio_speech_ended()) {
           led_set_state(LED_STATE_WAIT_RESPONSE, 1500);
           ESP_LOGI(TAG, "Pausing audio processing, as we wait for a run");
-          audio_pause();
+          // Directly raise the flag, since `audio_pause()` results in a deadlock
+          xTaskNotify(audio_task_handle, 0, eNoAction);
         }
       }
     }
@@ -173,7 +174,9 @@ void audio_pause()
 {
   // `vTaskSuspend()` followed by `i2s_disable()` hangs,
   // supposedly due to unresolved blocks
+  // Here we raise a notification flag and wait for the task to suspend itself
   xTaskNotify(audio_task_handle, 0, eNoAction);
+  while (eTaskGetState(audio_task_handle) != eSuspended) taskYIELD();
 }
 
 void audio_resume()
