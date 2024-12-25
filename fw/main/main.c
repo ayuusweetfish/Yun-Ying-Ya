@@ -197,9 +197,6 @@ if (0) {
         last_sent = n;
       }
       if (audio_speech_ended()) {
-        // TODO: Move this to yield a shorter latency
-        audio_pause();
-        ESP_LOGI(TAG, "Pausing audio processing!");
         state = STATE_LISTEN;
         const char *s = post_finish(p);
         printf("Result: %s\n", s != NULL ? s : "(null)");
