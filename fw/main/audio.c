@@ -151,15 +151,15 @@ void audio_task(void *_unused)
         memcpy(speech_buffer + speech_buffer_ptr, fetch_result->data, copy_count * sizeof(int16_t));
         speech_buffer_ptr += copy_count;
         // TODO: Unify this with VAD? (See above)
-        if (fetch_result->data_volume < -40) {
-          if (++below_speech_threshold_count >= 2 * 16000 / fetch_chunksize) {
+        if (speech_buffer_ptr >= 3 * 16000 && fetch_result->data_volume < -40) {
+          if (++below_speech_threshold_count >= 16000 / fetch_chunksize) {
             speech_ended_by_threshold = true;
             ESP_LOGI(TAG, "No more speech, wrapping up!");
           }
         } else {
           below_speech_threshold_count = 0;
         }
-        if (copy_count > 0 && audio_speech_ended()) {
+        if (audio_speech_ended()) {
           led_set_state(LED_STATE_WAIT_RESPONSE, 1500);
           ESP_LOGI(TAG, "Pausing audio processing, as we wait for a run");
           audio_pause();

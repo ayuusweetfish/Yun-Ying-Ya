@@ -207,8 +207,9 @@ if (0) {
           vTaskDelay(2000 / portTICK_PERIOD_MS);
           led_set_state(LED_STATE_IDLE, 500);
         }
-        audio_clear_wake_state();
         audio_resume();
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        audio_clear_wake_state();
         ESP_LOGI(TAG, "Finished running, resuming audio listen!");
       }
     }
