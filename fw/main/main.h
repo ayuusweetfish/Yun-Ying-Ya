@@ -44,3 +44,4 @@ enum led_state_t {
 };
 void led_set_state(enum led_state_t state, int transition);
 bool led_set_program(const char *program_source);
+uint32_t led_get_program_duration();

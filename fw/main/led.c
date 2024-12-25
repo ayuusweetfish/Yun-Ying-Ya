@@ -174,20 +174,20 @@ static inline void output_tint(float r, float g, float b)
 struct tint { float r, g, b; };
 
 struct program_op {
-  int duration;
+  uint32_t duration;
   enum op_type_t {
     OP_TYPE_DELAY,
     OP_TYPE_FADE,
     OP_TYPE_BREATHE,
   } type;
-  int args[3];
+  uint32_t args[3];
 };
 #define MAX_DURATION 120000
 #define MAX_ARG 100000
 #define N_MAX_OPS 256
 struct program {
-  int n;
-  int total_dur;
+  uint32_t n;
+  uint32_t total_dur;
   struct program_op ops[N_MAX_OPS];
 };
 
@@ -197,7 +197,7 @@ static inline bool parse_program(struct program *p, const char *s)
   p->total_dur = 0;
 
   while (*s != '\0') {
-    int duration = 0;
+    uint32_t duration = 0;
     while (!(*s >= '0' && *s <= '9') && *s != '\0') s++;
     if (*s == '\0') break;
     while (*s >= '0' && *s <= '9') {
@@ -220,7 +220,7 @@ static inline bool parse_program(struct program *p, const char *s)
     p->ops[p->n].type = type;
 
     for (int i = 0; i < argc; i++) {
-      int arg = 0;
+      uint32_t arg = 0;
       while (!(*s >= '0' && *s <= '9') && *s != '\0') s++;
       if (*s == '\0') return false;
       while (*s >= '0' && *s <= '9') {
@@ -241,16 +241,16 @@ static inline bool parse_program(struct program *p, const char *s)
 
 struct program_ptr {
   int op;
-  int last_t, dt;
+  uint32_t last_t, dt;
   struct tint last_tint;
 };
 
-static struct tint program_eval(const struct program *p, struct program_ptr *ptr, int t)
+static struct tint program_eval(const struct program *p, struct program_ptr *ptr, uint32_t t)
 {
-  int dt = t - ptr->last_t;
+  uint32_t dt = t - ptr->last_t;
   dt += ptr->dt;
   while (dt > 0 && ptr->op < p->n) {
-    int op_dur = p->ops[ptr->op].duration;
+    uint32_t op_dur = p->ops[ptr->op].duration;
     if (dt > op_dur) {
       dt -= op_dur;
       if (p->ops[ptr->op].type == OP_TYPE_FADE)
@@ -313,14 +313,14 @@ static struct tint program_eval(const struct program *p, struct program_ptr *ptr
 // ======== States and transitions ======== //
 
 static enum led_state_t cur_state = LED_STATE_IDLE;
-static int since = 0;
+static uint32_t since = 0;
 
 static struct program run_program;
 static struct program_ptr run_program_ptr;
 
 static enum led_state_t last_state;
-static int transition_dur = 0;
-static int last_since_delta;
+static uint32_t transition_dur = 0;
+static uint32_t last_since_delta;
 
 /*
 Rationale and analysis for concurrency.
@@ -365,13 +365,16 @@ void led_set_state(enum led_state_t state, int transition)
   cur_state = state;
   since = 0;
 
+  if (state == LED_STATE_RUN)
+    run_program_ptr = (struct program_ptr){ 0 };
+
   xSemaphoreGive(led_mutex);
 
   while (eTaskGetState(led_task_handle) == eRunning) taskYIELD();
   vTaskResume(led_task_handle);
 }
 
-static inline struct tint state_render(enum led_state_t state, int time)
+static inline struct tint state_render(enum led_state_t state, uint32_t time)
 {
   switch (state) {
   case LED_STATE_IDLE:
@@ -451,4 +454,9 @@ bool led_set_program(const char *program_source)
 {
   run_program_ptr = (struct program_ptr){ 0 };
   return parse_program(&run_program, program_source);
+}
+
+uint32_t led_get_program_duration()
+{
+  return run_program.total_dur;
 }
