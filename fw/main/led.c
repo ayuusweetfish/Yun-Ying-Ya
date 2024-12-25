@@ -412,7 +412,7 @@ static inline struct tint state_render(enum led_state_t state, uint32_t time)
   }
 }
 
-void led_task_fn(void *_unused)
+static void led_task_fn(void *_unused)
 {
 #define INTERVAL 20
   while (true) {

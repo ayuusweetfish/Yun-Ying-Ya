@@ -54,6 +54,9 @@ void audio_init()
   xTaskCreate(audio_task, "audio_task", 16384, NULL, 5, &audio_task_handle);
 }
 
+static int below_sleep_threshold_count = 0;
+static bool can_sleep = true;
+
 static int wake_state = 0;
 
 static SemaphoreHandle_t buffer_mutex;
@@ -120,6 +123,16 @@ void audio_task(void *_unused)
       assert(fetch_result->data_size == fetch_chunksize * sizeof(int16_t));
       feed_count -= fetch_chunksize;
 
+      if (wake_state == 0 && !can_sleep) {
+        if (fetch_result->data_volume < -40) {
+          below_sleep_threshold_count++;
+          if (below_sleep_threshold_count >= 1 * 16000 / fetch_chunksize)
+            can_sleep = true;
+        } else {
+          below_sleep_threshold_count = 0;
+        }
+      }
+
       if (wake_state != 0) {
         // Save to buffer
         int copy_count = min(
@@ -146,6 +159,17 @@ void audio_resume()
 {
   ESP_ERROR_CHECK(i2s_enable());
   vTaskResume(audio_task_handle);
+}
+
+bool audio_can_sleep()
+{
+  return can_sleep;
+}
+
+void audio_clear_can_sleep()
+{
+  below_sleep_threshold_count = 0;
+  can_sleep = false;
 }
 
 int audio_wake_state()

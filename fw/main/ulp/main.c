@@ -178,7 +178,7 @@ int main()
     }
     c0 = audio_buf[0];
     c2 = rms;
-    if (rms >= 64 * 10000) {
+    if (rms >= 64 * 250000) {
       if (++successive >= 4) {
         if (successive >= 6) successive = 6;
         wakeup_count++;

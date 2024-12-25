@@ -47,7 +47,7 @@ void app_main(void)
   ESP_ERROR_CHECK(ret);
 
   // Wi-Fi
-if (0) {
+if (1) {
   wifi_init_sta();
   led_set_state(LED_STATE_CONN_CHECK, 500);
   int http_test_result = http_test();
@@ -137,7 +137,7 @@ if (0) {
 
   esp_sleep_enable_ulp_wakeup();
 
-  while (1) {
+  while (0) {
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
     ESP_LOGI(TAG, "Wake up: %" PRIu32 " %04" PRIx32 " %" PRIu32 " %10" PRIu32, ulp_wakeup_count, ulp_c0, ulp_c1, ulp_c2);
     // ~800 cycles for 24 bits
@@ -157,24 +157,36 @@ if (0) {
     xQueueReset((QueueHandle_t)sem_ulp);
   }
 
-  ESP_ERROR_CHECK(i2s_enable());
-
   // Streaming POST request handle
   post_handle_t *p = post_create();
 
+  xSemaphoreTake(sem_ulp, portMAX_DELAY);
+  audio_resume();
+
   enum {
-    STATE_IDLE,
+    STATE_LISTEN,
     STATE_SPEECH,
-  } state = STATE_IDLE;
+  } state = STATE_LISTEN;
   int last_sent = 0;
   while (1) {
     vTaskDelay(100 / portTICK_PERIOD_MS);
-    if (state == 0 && audio_wake_state() != 0) {
-      printf("Wake-up word detected\n");
-      state = STATE_SPEECH;
-      led_set_state(LED_STATE_SPEECH, 500);
-      last_sent = 0;
-      post_open(p);
+    if (state == STATE_LISTEN) {
+      if (audio_wake_state() != 0) {
+        printf("Wake-up word detected\n");
+        state = STATE_SPEECH;
+        led_set_state(LED_STATE_SPEECH, 500);
+        last_sent = 0;
+        post_open(p);
+      } else if (audio_can_sleep()) {
+        ESP_LOGI(TAG, "Can sleep now!");
+        audio_pause();
+        xQueueReset((QueueHandle_t)sem_ulp);
+        xSemaphoreTake(sem_ulp, portMAX_DELAY);
+        audio_resume();
+        audio_clear_can_sleep();
+        ESP_LOGI(TAG, "Resuming now!");
+        continue;
+      }
     }
     if (state == STATE_SPEECH) {
       int n = audio_speech_buffer_size();
@@ -185,12 +197,15 @@ if (0) {
         last_sent = n;
       }
       if (audio_speech_ended()) {
-        state = STATE_IDLE;
+        // TODO: Move this to yield a shorter latency
+        audio_pause();
+        ESP_LOGI(TAG, "Pausing audio processing!");
+        state = STATE_LISTEN;
         const char *s = post_finish(p);
         printf("Result: %s\n", s != NULL ? s : "(null)");
         if (s != NULL && led_set_program(s)) {
           led_set_state(LED_STATE_RUN, 500);
-          vTaskDelay(35000 / portTICK_PERIOD_MS);
+          vTaskDelay(led_get_program_duration() / portTICK_PERIOD_MS);
           led_set_state(LED_STATE_IDLE, 2000);
         } else {
           led_set_state(LED_STATE_ERROR, 500);
@@ -198,6 +213,8 @@ if (0) {
           led_set_state(LED_STATE_IDLE, 500);
         }
         audio_clear_wake_state();
+        audio_resume();
+        ESP_LOGI(TAG, "Finished running, resuming audio listen!");
       }
     }
   }
