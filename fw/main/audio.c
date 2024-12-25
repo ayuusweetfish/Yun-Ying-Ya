@@ -51,6 +51,9 @@ void audio_init()
     return;
   }
 
+  // Enable I2S first, before any read may happen in the task
+  ESP_ERROR_CHECK(i2s_enable());
+
   xTaskCreate(audio_task, "audio_task", 16384, NULL, 5, &audio_task_handle);
 }
 
@@ -62,8 +65,11 @@ static int wake_state = 0;
 static SemaphoreHandle_t buffer_mutex;
 
 static int16_t *speech_buffer;
-#define SPEECH_BUFFER_SIZE (16000 * 5)
+#define SPEECH_BUFFER_SIZE (16000 * 10)
 static int speech_buffer_ptr = 0;
+
+static int below_speech_threshold_count = 0;  // TODO: What a messy name
+static bool speech_ended_by_threshold = false;
 
 void audio_task(void *_unused)
 {
@@ -116,6 +122,8 @@ void audio_task(void *_unused)
       if (fetch_result->wakeup_state == WAKENET_DETECTED) {
         ESP_LOGI(TAG, "Wake word detected");
         wake_state = 1;
+        below_speech_threshold_count = 0;
+        speech_ended_by_threshold = false;
       }
       // XXX: Debug use
       // static int m = 0; if (wake_state == 0 && (m = (m + 1) % 64) == 63) wake_state = 1;
@@ -124,6 +132,7 @@ void audio_task(void *_unused)
       feed_count -= fetch_chunksize;
 
       if (wake_state == 0 && !can_sleep) {
+        // TODO: Unify this with VAD? (See below)
         if (fetch_result->data_volume < -40) {
           below_sleep_threshold_count++;
           if (below_sleep_threshold_count >= 1 * 16000 / fetch_chunksize)
@@ -133,7 +142,7 @@ void audio_task(void *_unused)
         }
       }
 
-      if (wake_state != 0) {
+      if (wake_state != 0 && !audio_speech_ended()) {
         // Save to buffer
         int copy_count = min(
           SPEECH_BUFFER_SIZE - speech_buffer_ptr,
@@ -141,6 +150,15 @@ void audio_task(void *_unused)
         );
         memcpy(speech_buffer + speech_buffer_ptr, fetch_result->data, copy_count * sizeof(int16_t));
         speech_buffer_ptr += copy_count;
+        // TODO: Unify this with VAD? (See above)
+        if (fetch_result->data_volume < -40) {
+          if (++below_speech_threshold_count >= 2 * 16000 / fetch_chunksize) {
+            speech_ended_by_threshold = true;
+            ESP_LOGI(TAG, "No more speech, wrapping up!");
+          }
+        } else {
+          below_speech_threshold_count = 0;
+        }
         if (copy_count > 0 && audio_speech_ended()) {
           led_set_state(LED_STATE_WAIT_RESPONSE, 1500);
           ESP_LOGI(TAG, "Pausing audio processing, as we wait for a run");
@@ -203,6 +221,5 @@ int audio_speech_buffer_size()
 
 bool audio_speech_ended()
 {
-  // TODO
-  return (speech_buffer_ptr >= SPEECH_BUFFER_SIZE);
+  return (speech_ended_by_threshold || speech_buffer_ptr >= SPEECH_BUFFER_SIZE);
 }

@@ -160,9 +160,6 @@ if (0) {
   // Streaming POST request handle
   post_handle_t *p = post_create();
 
-  xSemaphoreTake(sem_ulp, portMAX_DELAY);
-  audio_resume();
-
   enum {
     STATE_LISTEN,
     STATE_SPEECH,
@@ -180,6 +177,7 @@ if (0) {
       } else if (audio_can_sleep()) {
         ESP_LOGI(TAG, "Can sleep now!");
         audio_pause();
+        ulp_wakeup_signal = 0;
         xQueueReset((QueueHandle_t)sem_ulp);
         xSemaphoreTake(sem_ulp, portMAX_DELAY);
         audio_resume();
