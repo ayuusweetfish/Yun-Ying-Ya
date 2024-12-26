@@ -33,7 +33,7 @@ void app_main(void)
 
   // `esp_pm/include/esp_pm.h`: Type is no longer implementation-specific
   ESP_ERROR_CHECK(esp_pm_configure(&(esp_pm_config_t){
-    .max_freq_mhz = 160,
+    .max_freq_mhz =  80,
     .min_freq_mhz =  10,
     .light_sleep_enable = true,
   }));

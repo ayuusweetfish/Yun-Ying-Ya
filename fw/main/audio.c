@@ -99,7 +99,16 @@ void audio_task(void *_unused)
     }
     if (i2s_read(buf32, &n, buf_count) != ESP_OK) {
       vTaskDelay(1);
+      continue;
     }
+  if (0) {
+    if (n == buf_count) {
+      n = 0;
+      if (++below_sleep_threshold_count >= 1 * 16000 / buf_count)
+        can_sleep = true;
+    }
+    continue;
+  }
     if (n == buf_count) {
       // ESP-SR calls for 16-bit samples, convert here
       for (int i = 0; i < buf_count; i++) buf16[i] = buf32[i] >> 16;

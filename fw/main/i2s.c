@@ -14,6 +14,11 @@ void i2s_init()
   i2s_chan_config_t rx_chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(
     I2S_NUM_AUTO,
     PIN_I2S_IS_MASTER ? I2S_ROLE_MASTER : I2S_ROLE_SLAVE);
+  // dma_frame_num = 4092 * 8 / (slot_num 1 * data_bit_width 32) = 1023
+  // interrupt_interval = 1023 / 16e3 = 63.9375 ms
+  // dma_desc_num = polling_cycle 20 ms / interrupt_interval = 1
+  rx_chan_cfg.dma_desc_num = 6;
+  rx_chan_cfg.dma_frame_num = 1023;
   ESP_ERROR_CHECK(i2s_new_channel(&rx_chan_cfg, NULL, &rx_chan));
 
   i2s_std_config_t rx_std_cfg = {
