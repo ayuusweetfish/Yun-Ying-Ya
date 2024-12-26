@@ -39,7 +39,11 @@ void app_main(void)
   }));
 
   // Battery fuel gauge
-  gauge_init();
+if (0) {
+  while (!gauge_init()) {
+    ESP_LOGI(TAG, "Battery fuel gauge not found. Retrying.");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
   while (1) {
     gauge_wake();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -48,6 +52,17 @@ void app_main(void)
       s.voltage, s.fuel, s.discharge);
     gauge_sleep();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+}
+  bool gauge_valid = gauge_init();
+  if (gauge_valid) {
+    gauge_wake();
+    struct gauge_state s = gauge_query();
+    ESP_LOGI(TAG, "VCELL = %" PRIu32 " uV, fuel = %" PRIu32 ", discharge = %" PRIu32,
+      s.voltage, s.fuel, s.discharge);
+    gauge_sleep();
+  } else {
+    ESP_LOGI(TAG, "Battery fuel gauge not found. Ignoring.");
   }
 
   // NVS

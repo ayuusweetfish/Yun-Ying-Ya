@@ -48,7 +48,7 @@ void led_set_state(enum led_state_t state, int transition);
 bool led_set_program(const char *program_source);
 uint32_t led_get_program_duration();
 
-void gauge_init();
+bool gauge_init();
 struct gauge_state {
   uint32_t voltage;   // in uV
   uint32_t fuel;      // in 1e-6
