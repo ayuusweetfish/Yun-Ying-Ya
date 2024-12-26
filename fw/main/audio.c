@@ -3,6 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "esp_log.h"
+#include <stdatomic.h>
 #include <string.h>
 
 #include "model_path.h"
@@ -71,6 +72,10 @@ static int speech_buffer_ptr = 0;
 static int below_speech_threshold_count = 0;  // TODO: What a messy name
 static bool speech_ended_by_threshold = false;
 
+static atomic_flag request_to_disable = ATOMIC_FLAG_INIT; // Active-low
+static const uint32_t *_Atomic external_push_buf = NULL;
+static _Atomic size_t external_push_n = 0;
+
 void audio_task(void *_unused)
 {
   buffer_mutex = xSemaphoreCreateMutex();
@@ -93,22 +98,20 @@ void audio_task(void *_unused)
   int16_t *buf16 = malloc(sizeof(int16_t) * buf_count);
   int feed_count = 0;
   while (1) {
-    if (xTaskNotifyWait(0, 0, NULL, 0)) {
-      ESP_ERROR_CHECK(i2s_disable());
-      vTaskSuspend(audio_task_handle);
+    if (xTaskNotifyWaitIndexed(/* index */ 0, 0, 0, NULL, 0)) {
+      if (!atomic_flag_test_and_set(&request_to_disable)) {
+        ESP_ERROR_CHECK(i2s_disable());
+        vTaskSuspend(audio_task_handle);
+      }
+      if (external_push_buf != 0) {
+        ESP_LOGI(TAG, "External push %p %zu", external_push_buf, external_push_n);
+        external_push_buf = 0;
+      }
     }
     if (i2s_read(buf32, &n, buf_count) != ESP_OK) {
       vTaskDelay(1);
       continue;
     }
-  if (0) {
-    if (n == buf_count) {
-      n = 0;
-      if (++below_sleep_threshold_count >= 1 * 16000 / buf_count)
-        can_sleep = true;
-    }
-    continue;
-  }
     if (n == buf_count) {
       // ESP-SR calls for 16-bit samples, convert here
       for (int i = 0; i < buf_count; i++) buf16[i] = buf32[i] >> 16;
@@ -172,11 +175,19 @@ void audio_task(void *_unused)
           led_set_state(LED_STATE_WAIT_RESPONSE, 1500);
           ESP_LOGI(TAG, "Pausing audio processing, as we wait for a run");
           // Directly raise the flag, since `audio_pause()` results in a deadlock
-          xTaskNotify(audio_task_handle, 0, eNoAction);
+          xTaskNotifyIndexed(audio_task_handle, 0, 0, eNoAction);
         }
       }
     }
   }
+}
+
+void audio_push(const uint32_t *buf, size_t n)
+{
+  external_push_buf = buf;
+  external_push_n = n;
+  xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
+  while (external_push_buf != NULL) taskYIELD();
 }
 
 void audio_pause()
@@ -184,7 +195,8 @@ void audio_pause()
   // `vTaskSuspend()` followed by `i2s_disable()` hangs,
   // supposedly due to unresolved blocks
   // Here we raise a notification flag and wait for the task to suspend itself
-  xTaskNotify(audio_task_handle, 0, eNoAction);
+  atomic_flag_clear(&request_to_disable);
+  xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
   while (eTaskGetState(audio_task_handle) != eSuspended) taskYIELD();
 }
 
