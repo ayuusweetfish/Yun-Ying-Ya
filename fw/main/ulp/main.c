@@ -15,7 +15,7 @@ uint32_t c0 = 0, c1 = 0, c2 = 0, c3 = 0;
 uint32_t debug[32];
 
 uint32_t audio_buf[1024];
-uint32_t wakeup_buf_ptr;
+uint32_t cur_buf_ptr;
 
 #pragma GCC push_options
 #pragma GCC optimize("O3")
@@ -187,11 +187,11 @@ int main()
     // c0 = audio_buf[0];
     // c2 = power;
     // c3 = background_power;
+    cur_buf_ptr = block + 64;
     if (power >= 64 * 160000 / 64) {
       if (++successive >= 4) {
-        if (successive >= 6) successive = 6;
+        successive = 4;
         wakeup_signal = 1;
-        wakeup_buf_ptr = block + 64;
         ulp_riscv_wakeup_main_processor();
       }
     } else {

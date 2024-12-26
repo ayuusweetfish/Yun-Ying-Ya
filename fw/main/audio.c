@@ -72,6 +72,10 @@ static int speech_buffer_ptr = 0;
 static int below_speech_threshold_count = 0;  // TODO: What a messy name
 static bool speech_ended_by_threshold = false;
 
+// External signals
+
+static bool i2s_channel_paused = false;
+
 static atomic_flag request_to_disable = ATOMIC_FLAG_INIT; // Active-low
 static const uint32_t *_Atomic external_push_buf = NULL;
 static size_t external_push_size, external_push_start, external_push_count;
@@ -97,28 +101,15 @@ void audio_task(void *_unused)
   int32_t *buf32 = malloc(sizeof(int32_t) * buf_count);
   int16_t *buf16 = malloc(sizeof(int16_t) * buf_count);
   int feed_count = 0;
-  while (1) {
-    if (xTaskNotifyWaitIndexed(/* index */ 0, 0, 0, NULL, 0)) {
-      if (!atomic_flag_test_and_set(&request_to_disable)) {
-        ESP_ERROR_CHECK(i2s_disable());
-        vTaskSuspend(audio_task_handle);
-      }
-      if (external_push_buf != 0) {
-        ESP_LOGI(TAG, "External push %p %zu %zu", external_push_buf, external_push_start, external_push_size);
-        external_push_buf = 0;
-      }
-    }
-    if (i2s_read(buf32, &n, buf_count) != ESP_OK) {
-      vTaskDelay(1);
-      continue;
-    }
-    if (n == buf_count) {
-      // ESP-SR calls for 16-bit samples, convert here
-      for (int i = 0; i < buf_count; i++) buf16[i] = buf32[i] >> 16;
-      afe_handle->feed(afe_data, buf16);
-      n = 0;
-      feed_count += buf_count;
-    }
+
+  // Feed a block of `buf_count` samples into the AFE, and
+  // fetch & process filtered samples when available
+  void process_audio_block()
+  {
+    // ESP-SR calls for 16-bit samples, convert here
+    for (int i = 0; i < buf_count; i++) buf16[i] = buf32[i] >> 16;
+    afe_handle->feed(afe_data, buf16);
+    feed_count += buf_count;
 
     if (feed_count >= fetch_chunksize) {
       afe_fetch_result_t *fetch_result = afe_handle->fetch(afe_data);
@@ -180,6 +171,30 @@ void audio_task(void *_unused)
       }
     }
   }
+
+  while (1) {
+    if (xTaskNotifyWaitIndexed(/* index */ 0, 0, 0, NULL, 0)) {
+      if (!atomic_flag_test_and_set(&request_to_disable)) {
+        ESP_ERROR_CHECK(i2s_disable());
+        vTaskSuspend(audio_task_handle);
+      }
+      if (external_push_buf != 0) {
+        ESP_LOGI(TAG, "External push %p %zu %zu", external_push_buf, external_push_start, external_push_size);
+        external_push_buf = 0;
+      }
+    }
+    if (!i2s_channel_paused) {
+      if (i2s_read(buf32, &n, buf_count) == ESP_OK) {
+        if (n == buf_count) {
+          n = 0;
+          process_audio_block();
+        }
+      } else {
+        vTaskDelay(1);
+        continue;
+      }
+    }
+  }
 }
 
 // We use a unified notification for both external data push and pause.
@@ -200,6 +215,7 @@ void audio_pause()
   // `vTaskSuspend()` followed by `i2s_disable()` hangs,
   // supposedly due to unresolved blocks
   // Here we raise a notification flag and wait for the task to suspend itself
+  i2s_channel_paused = true;
   atomic_flag_clear(&request_to_disable);
   xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
   while (eTaskGetState(audio_task_handle) != eSuspended) taskYIELD();
@@ -207,6 +223,7 @@ void audio_pause()
 
 void audio_resume()
 {
+  i2s_channel_paused = false;
   ESP_ERROR_CHECK(i2s_enable());
   vTaskResume(audio_task_handle);
 }
