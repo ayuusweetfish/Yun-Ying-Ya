@@ -77,7 +77,7 @@ static bool speech_ended_by_threshold = false;
 static bool i2s_channel_paused = false;
 
 static atomic_flag request_to_disable = ATOMIC_FLAG_INIT; // Active-low
-static const uint32_t *_Atomic external_push_buf = NULL;
+static const int32_t *_Atomic external_push_buf = NULL;
 static size_t external_push_size, external_push_start, external_push_count;
 
 void audio_task(void *_unused)
@@ -179,8 +179,31 @@ void audio_task(void *_unused)
         vTaskSuspend(audio_task_handle);
       }
       if (external_push_buf != 0) {
-        ESP_LOGI(TAG, "External push %p %zu %zu", external_push_buf, external_push_start, external_push_size);
-        external_push_buf = 0;
+        ESP_LOGI(TAG, "External push %p %zu %zu %zu", external_push_buf, external_push_size, external_push_start, external_push_count);
+        const int32_t *buf = external_push_buf;
+        uint32_t size = external_push_size;
+        uint32_t start = external_push_start;
+        uint32_t count = external_push_count;
+
+        // Append audio block to the existing buffer (`buf32 + n`)
+        while (count > 0) {
+          uint32_t n_1 = min(count, buf_count - n);
+          n_1 = min(n_1, size - start);
+          // assert(n_1 > 0) -- this assumes n != buf_count && start != size
+          ESP_LOGI(TAG, "External push -- block size %" PRIu32, n_1);
+          memcpy(buf32 + n, buf + start, n_1 * sizeof(int32_t));
+          n += n_1;
+          start += n_1;
+          count -= n_1;
+          if (n == buf_count) {
+            n = 0;
+            process_audio_block();
+          }
+          if (start == size) start = 0;
+        }
+
+        // Release flag & arguments
+        external_push_buf = NULL;
       }
     }
     if (!i2s_channel_paused) {
@@ -200,7 +223,7 @@ void audio_task(void *_unused)
 // We use a unified notification for both external data push and pause.
 // Performance-wise, this results in a very negligible gain.
 
-void audio_push(const uint32_t *buf, size_t size, size_t start, size_t count)
+void audio_push(const int32_t *buf, size_t size, size_t start, size_t count)
 {
   external_push_buf = buf;
   external_push_size = size;

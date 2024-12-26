@@ -211,7 +211,7 @@ if (0) {
         audio_resume();
         audio_clear_can_sleep();
         ESP_LOGI(TAG, "Resuming now!");
-        audio_push(&ulp_audio_buf, 256, ulp_cur_buf_ptr, 10);
+        audio_push((const int32_t *)&ulp_audio_buf, 1024, (ulp_cur_buf_ptr - 768 + 1024) % 1024, 768);
         continue;
       }
     }

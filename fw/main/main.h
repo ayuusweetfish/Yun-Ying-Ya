@@ -26,7 +26,7 @@ esp_err_t i2s_read(int32_t *buf, size_t *n, size_t max_n);
 void audio_init();
 void audio_pause();
 void audio_resume();
-void audio_push(const uint32_t *buf, size_t size, size_t start, size_t count);
+void audio_push(const int32_t *buf, size_t size, size_t start, size_t count);
 bool audio_can_sleep();
 void audio_clear_can_sleep();
 int audio_wake_state();
