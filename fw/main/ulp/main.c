@@ -14,7 +14,8 @@ uint32_t wakeup_signal = 0;
 uint32_t c0 = 0, c1 = 0, c2 = 0, c3 = 0;
 uint32_t debug[32];
 
-uint32_t audio_buf[256];
+uint32_t audio_buf[1024];
+uint32_t wakeup_buf_ptr;
 
 #pragma GCC push_options
 #pragma GCC optimize("O3")
@@ -166,14 +167,14 @@ int main()
   // Wait for WS rising edge
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
-  int block = 0;
+  uint32_t block = 0;
   int successive = 0;
   uint32_t background_power = 0x80000000;
   while (1) {
     uint32_t power = 0;
     for (int i = 0; i < 64; i++) {
       uint32_t sample = read();
-      audio_buf[i] = sample;
+      audio_buf[block + i] = sample;
       int32_t s16 = (int32_t)(int16_t)sample;
       power += (uint32_t)(s16 * s16) / 64;
     }
@@ -184,18 +185,19 @@ int main()
       // Time constant = 64 * 8192 / 16e3 = 32.768 s
     }
     // c0 = audio_buf[0];
-    c2 = power;
-    c3 = background_power;
+    // c2 = power;
+    // c3 = background_power;
     if (power >= 64 * 160000 / 64) {
       if (++successive >= 4) {
         if (successive >= 6) successive = 6;
         wakeup_signal = 1;
+        wakeup_buf_ptr = block + 64;
         ulp_riscv_wakeup_main_processor();
       }
     } else {
       successive -= 2;
       if (successive < 0) successive = 0;
     }
-    block = (block + 128) % 256;
+    block = (block + 64) % 1024;
   }
 }

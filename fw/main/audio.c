@@ -74,7 +74,7 @@ static bool speech_ended_by_threshold = false;
 
 static atomic_flag request_to_disable = ATOMIC_FLAG_INIT; // Active-low
 static const uint32_t *_Atomic external_push_buf = NULL;
-static _Atomic size_t external_push_n = 0;
+static size_t external_push_size, external_push_start, external_push_count;
 
 void audio_task(void *_unused)
 {
@@ -104,7 +104,7 @@ void audio_task(void *_unused)
         vTaskSuspend(audio_task_handle);
       }
       if (external_push_buf != 0) {
-        ESP_LOGI(TAG, "External push %p %zu", external_push_buf, external_push_n);
+        ESP_LOGI(TAG, "External push %p %zu %zu", external_push_buf, external_push_start, external_push_size);
         external_push_buf = 0;
       }
     }
@@ -182,10 +182,15 @@ void audio_task(void *_unused)
   }
 }
 
-void audio_push(const uint32_t *buf, size_t n)
+// We use a unified notification for both external data push and pause.
+// Performance-wise, this results in a very negligible gain.
+
+void audio_push(const uint32_t *buf, size_t size, size_t start, size_t count)
 {
   external_push_buf = buf;
-  external_push_n = n;
+  external_push_size = size;
+  external_push_start = start;
+  external_push_count = count;
   xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
   while (external_push_buf != NULL) taskYIELD();
 }

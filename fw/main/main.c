@@ -74,7 +74,7 @@ if (0) {
   ESP_ERROR_CHECK(ret);
 
   // Wi-Fi
-if (1) {
+if (0) {
   wifi_init_sta();
   led_set_state(LED_STATE_CONN_CHECK, 500);
   int http_test_result = http_test();
@@ -211,7 +211,7 @@ if (0) {
         audio_resume();
         audio_clear_can_sleep();
         ESP_LOGI(TAG, "Resuming now!");
-        audio_push(&ulp_audio_buf, 10);
+        audio_push(&ulp_audio_buf, 256, ulp_wakeup_buf_ptr, 10);
         continue;
       }
     }
