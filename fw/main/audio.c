@@ -37,7 +37,7 @@ void audio_init()
   const esp_afe_sr_iface_t *afe_handle = &ESP_AFE_SR_HANDLE;
   afe_config_t afe_config = AFE_CONFIG_DEFAULT();
   afe_config.aec_init = false;
-  afe_config.vad_init = false;
+  afe_config.vad_init = true;
   afe_config.wakenet_init = true;
   afe_config.wakenet_model_name = wakenet_name;
   afe_config.afe_ns_mode = NS_MODE_SSP;
@@ -120,7 +120,7 @@ void audio_task(void *_unused)
           int32_t sample = buf16[i];
           rms += sample * sample;
         }
-        ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f, sample = %08x, RMS = %u", fetch_result->data_size, fetch_result->data_volume, (int)buf32[0], (unsigned)(rms / buf_count));
+        ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f, sample = %08x, RMS = %u, VAD = %u", fetch_result->data_size, fetch_result->data_volume, (int)buf32[0], (unsigned)(rms / buf_count), (unsigned)fetch_result->vad_state);
       }
       if (fetch_result->wakeup_state == WAKENET_DETECTED) {
         ESP_LOGI(TAG, "Wake word detected");
@@ -135,8 +135,7 @@ void audio_task(void *_unused)
       feed_count -= fetch_chunksize;
 
       if (wake_state == 0 && !can_sleep) {
-        // TODO: Unify this with VAD? (See below)
-        if (fetch_result->data_volume < -40) {
+        if (fetch_result->vad_state == AFE_VAD_SILENCE) {
           below_sleep_threshold_count++;
           if (below_sleep_threshold_count >= 1 * 16000 / fetch_chunksize)
             can_sleep = true;
@@ -153,9 +152,8 @@ void audio_task(void *_unused)
         );
         memcpy(speech_buffer + speech_buffer_ptr, fetch_result->data, copy_count * sizeof(int16_t));
         speech_buffer_ptr += copy_count;
-        // TODO: Unify this with VAD? (See above)
-        if (speech_buffer_ptr >= 3 * 16000 && fetch_result->data_volume < -40) {
-          if (++below_speech_threshold_count >= 16000 / fetch_chunksize) {
+        if (speech_buffer_ptr >= 3 * 16000 && fetch_result->vad_state == AFE_VAD_SILENCE) {
+          if (++below_speech_threshold_count >= (uint32_t)(1.5 * 16000) / fetch_chunksize) {
             speech_ended_by_threshold = true;
             ESP_LOGI(TAG, "No more speech, wrapping up!");
           }
@@ -179,7 +177,6 @@ void audio_task(void *_unused)
         vTaskSuspend(audio_task_handle);
       }
       if (external_push_buf != 0) {
-        ESP_LOGI(TAG, "External push %p %zu %zu %zu", external_push_buf, external_push_size, external_push_start, external_push_count);
         const int32_t *buf = external_push_buf;
         uint32_t size = external_push_size;
         uint32_t start = external_push_start;
@@ -189,8 +186,7 @@ void audio_task(void *_unused)
         while (count > 0) {
           uint32_t n_1 = min(count, buf_count - n);
           n_1 = min(n_1, size - start);
-          // assert(n_1 > 0) -- this assumes n != buf_count && start != size
-          ESP_LOGI(TAG, "External push -- block size %" PRIu32, n_1);
+          assert(n_1 > 0);  // Assumes n != buf_count && start != size
           memcpy(buf32 + n, buf + start, n_1 * sizeof(int32_t));
           n += n_1;
           start += n_1;
