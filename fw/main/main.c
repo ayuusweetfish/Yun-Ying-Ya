@@ -208,10 +208,10 @@ if (0) {
         ulp_wakeup_signal = 0;
         xQueueReset((QueueHandle_t)sem_ulp);
         xSemaphoreTake(sem_ulp, portMAX_DELAY);
-        audio_resume();
         audio_clear_can_sleep();
-        ESP_LOGI(TAG, "Resuming now!");
         audio_push((const int32_t *)&ulp_audio_buf, 1024, (ulp_cur_buf_ptr - 768 + 1024) % 1024, 768);
+        ESP_LOGI(TAG, "Resuming now!");
+        audio_resume();
         continue;
       }
     }

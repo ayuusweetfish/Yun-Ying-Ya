@@ -171,36 +171,35 @@ void audio_task(void *_unused)
   }
 
   while (1) {
-    if (xTaskNotifyWaitIndexed(/* index */ 0, 0, 0, NULL, 0)) {
-      if (!atomic_flag_test_and_set(&request_to_disable)) {
-        ESP_ERROR_CHECK(i2s_disable());
-        vTaskSuspend(audio_task_handle);
-      }
-      if (external_push_buf != 0) {
-        const int32_t *buf = external_push_buf;
-        uint32_t size = external_push_size;
-        uint32_t start = external_push_start;
-        uint32_t count = external_push_count;
+    xTaskNotifyWaitIndexed(/* index */ 0, 0, 0, NULL, 0);
+    if (!atomic_flag_test_and_set(&request_to_disable)) {
+      ESP_ERROR_CHECK(i2s_disable());
+      vTaskSuspend(audio_task_handle);
+    }
+    if (external_push_buf != 0) {
+      const int32_t *buf = external_push_buf;
+      uint32_t size = external_push_size;
+      uint32_t start = external_push_start;
+      uint32_t count = external_push_count;
 
-        // Append audio block to the existing buffer (`buf32 + n`)
-        while (count > 0) {
-          uint32_t n_1 = min(count, buf_count - n);
-          n_1 = min(n_1, size - start);
-          assert(n_1 > 0);  // Assumes n != buf_count && start != size
-          memcpy(buf32 + n, buf + start, n_1 * sizeof(int32_t));
-          n += n_1;
-          start += n_1;
-          count -= n_1;
-          if (n == buf_count) {
-            n = 0;
-            process_audio_block();
-          }
-          if (start == size) start = 0;
+      // Append audio block to the existing buffer (`buf32 + n`)
+      while (count > 0) {
+        uint32_t n_1 = min(count, buf_count - n);
+        n_1 = min(n_1, size - start);
+        assert(n_1 > 0);  // Assumes n != buf_count && start != size
+        memcpy(buf32 + n, buf + start, n_1 * sizeof(int32_t));
+        n += n_1;
+        start += n_1;
+        count -= n_1;
+        if (n == buf_count) {
+          n = 0;
+          process_audio_block();
         }
-
-        // Release flag & arguments
-        external_push_buf = NULL;
+        if (start == size) start = 0;
       }
+
+      // Release flag & arguments
+      external_push_buf = NULL;
     }
     if (!i2s_channel_paused) {
       if (i2s_read(buf32, &n, buf_count) == ESP_OK) {
@@ -208,16 +207,13 @@ void audio_task(void *_unused)
           n = 0;
           process_audio_block();
         }
-      } else {
-        vTaskDelay(1);
-        continue;
       }
     }
   }
 }
 
-// We use a unified notification for both external data push and pause.
-// Performance-wise, this results in a very negligible gain.
+// We use a unified notification for everything --
+// external data push, task pause, and I2S start signal.
 
 void audio_push(const int32_t *buf, size_t size, size_t start, size_t count)
 {
@@ -244,6 +240,7 @@ void audio_resume()
 {
   i2s_channel_paused = false;
   ESP_ERROR_CHECK(i2s_enable());
+  xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
   vTaskResume(audio_task_handle);
 }
 
