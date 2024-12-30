@@ -111,6 +111,10 @@ if (0) {
   // Audio processing
   audio_init();
 
+  // Audio is paused on startup
+  audio_resume();
+  audio_pause();
+
   rtc_clk_fast_src_set(SOC_RTC_FAST_CLK_SRC_XTAL_D2);
 
   rtc_gpio_init(PIN_I2S_BCK_PROBE);
@@ -162,6 +166,40 @@ if (0) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
+  while (1) {
+    vTaskDelay(pdMS_TO_TICKS(20));
+    static uint32_t last_push = 0;
+    uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
+    // audio_push((const int32_t *)&ulp_audio_buf, 1024, last_push, (cur_push - last_push + 1024) % 1024);
+
+    static uint16_t a[32000];
+    static uint32_t ptr = 0;
+    for (uint32_t i = last_push; i != cur_push; i = (i + 64) % 1024) {
+      for (uint32_t j = 0; j < 64; j++)
+        a[ptr + j] += (&ulp_audio_buf)[i + j];
+      ptr += 64;
+      if (ptr == 32000) {
+        printf("End!\n");
+        // Dump
+        // ESP_LOG_BUFFER_HEX(TAG, a, sizeof a);
+        putchar('\n');
+        for (int i = 0; i < 32000; i += 320) {
+          for (int j = 0; j < 320; j++) printf("%04" PRIx16, a[i + j]);
+          putchar('\n');
+          vTaskDelay(1);
+        }
+        putchar('\n');
+        for (int i = 0; i < 10; i++) vTaskDelay(1); // Prevent auto light sleep for a while
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        printf("Starting!\n");
+        last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
+        break;
+      }
+    }
+
+    last_push = cur_push;
+  }
+
   esp_sleep_enable_ulp_wakeup();
 
   while (0) {
@@ -188,10 +226,6 @@ if (0) {
   // Streaming POST request handle
   post_handle_t *p = post_create();
 
-  // Audio is paused on startup
-  audio_resume();
-  audio_pause();
-
   enum {
     STATE_LISTEN,
     STATE_SPEECH,
@@ -199,7 +233,7 @@ if (0) {
   int last_sent = 0;
   uint32_t last_push = 0;
   while (1) {
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(20 / portTICK_PERIOD_MS);
     if (state == STATE_LISTEN) {
       // Push data in
       uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
