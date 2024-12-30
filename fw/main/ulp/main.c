@@ -52,8 +52,8 @@ static inline uint32_t read()
     "lw %[b17], 0x424(%[addr])\n"
     "lw %[b18], 0x424(%[addr])\n"
     "lw %[b19], 0x424(%[addr])\n"
-  /*
     "lw %[b20], 0x424(%[addr])\n"
+  /*
     "lw %[b21], 0x424(%[addr])\n"
     "lw %[b22], 0x424(%[addr])\n"
     "lw %[b23], 0x424(%[addr])\n"
@@ -113,8 +113,8 @@ static inline uint32_t read()
   if ((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b17 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-/*
   if ((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+/*
   if ((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b21 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b22 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; }
@@ -167,12 +167,12 @@ static inline uint32_t read_less()
     "lw %[b13], 0x424(%[addr])\n"
     "lw %[b14], 0x424(%[addr])\n"
     "lw %[b15], 0x424(%[addr])\n"
-  /*
     "lw %[b16], 0x424(%[addr])\n"
     "lw %[b17], 0x424(%[addr])\n"
     "lw %[b18], 0x424(%[addr])\n"
     "lw %[b19], 0x424(%[addr])\n"
     "lw %[b20], 0x424(%[addr])\n"
+  /*
     "lw %[b21], 0x424(%[addr])\n"
     "lw %[b22], 0x424(%[addr])\n"
     "lw %[b23], 0x424(%[addr])\n"
@@ -228,12 +228,12 @@ static inline uint32_t read_less()
   if ((b13 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b13 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b14 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b14 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b15 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b15 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-/*
   if ((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b16 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b17 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+/*
   if ((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b21 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b22 >> (10 + PIN_I2S_DIN)) & 1); n++; }
   if ((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; }
@@ -270,28 +270,23 @@ int main()
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
   uint32_t block = 0;
   int successive = 0;
-  uint32_t background_power = 0;
   while (1) {
     if (check_power) {
       uint32_t power = 0;
-      for (int i = 0; i < 256; i++) {
+      uint32_t sample = read_less();
+      audio_buf[block + 0] = sample;
+      int16_t last_s16 = (int16_t)sample;
+      for (int i = 1; i < 64; i++) {
         uint32_t sample = read_less();
         audio_buf[block + i] = sample;
-        int32_t s16 = (int32_t)(int16_t)sample;
-        power += (uint32_t)(s16 * s16) / 64;
+        int32_t s16 = (int16_t)sample;
+        int32_t s_diff = last_s16 - s16;
+        power += (uint32_t)(s_diff * s_diff) / 64;
+        last_s16 = s16;
       }
-      cur_buf_ptr = block = (block + 256) % 1024;
-      if (power < background_power) {
-        background_power -= (background_power - power) / 256;
-        // Time constant = 64 * 256 / 16e3 = 1.024 s
-      } else {
-        background_power += (power - background_power) / 1024;
-        // Time constant = 64 * 1024 / 16e3 = 4.096 s
-      }
-      // c0 = audio_buf[0];
+      cur_buf_ptr = block = (block + 64) % 1024;
       c2 = power;
-      c3 = background_power;
-      if (power >= 256 * 160000 / 64) {
+      if (power >= 20000) {
         if (++successive >= 4) {
           successive = 4;
           wakeup_signal = 1;
@@ -303,11 +298,11 @@ int main()
       }
     } else {
       uint32_t power = 0;
-      for (int i = 0; i < 256; i++) {
+      for (int i = 0; i < 64; i++) {
         uint32_t sample = read();
         audio_buf[block + i] = sample;
       }
-      cur_buf_ptr = block = (block + 256) % 1024;
+      cur_buf_ptr = block = (block + 64) % 1024;
     }
   }
 }

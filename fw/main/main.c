@@ -173,8 +173,8 @@ if (0) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
-if (1) {
-  ulp_check_power = 1;
+if (0) {
+  ulp_check_power = 0;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   printf("Starting!\n");
   uint32_t last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
@@ -185,10 +185,19 @@ if (1) {
 
     static uint16_t a[32000];
     static uint32_t ptr = 0;
-    for (uint32_t i = last_push; i != cur_push; i = (i + 256) % 1024) {
-      for (uint32_t j = 0; j < 256; j++)
-        a[ptr + j] += (&ulp_audio_buf)[i + j];
-      ptr += 256;
+    for (uint32_t i = last_push; i != cur_push; i = (i + 64) % 1024) {
+      for (uint32_t j = 0; j < 64; j++)
+        a[ptr + j] = (&ulp_audio_buf)[i + j];
+      uint32_t power = 0;
+      int16_t last_s16 = (int16_t)a[ptr];
+      for (uint32_t j = 1; j < 64; j++) {
+        int16_t s16 = (int16_t)a[ptr + j];
+        int32_t s_diff = last_s16 - s16;
+        power += (uint32_t)(s_diff * s_diff) / 64;
+        last_s16 = s16;
+      }
+      printf("%8u power = %10u\n", (unsigned)ptr, (unsigned)power);
+      ptr += 64;
       if (ptr == 32000) {
         printf("End! cycles = %u\n", (unsigned)ulp_c1);
         // Dump
@@ -240,7 +249,7 @@ if (1) {
 
   ulp_check_power = 1;
 
-  while (1) {
+  while (0) {
     ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " background=%10" PRIu32 " diff=%10" PRId32 " %c", ulp_c2, ulp_c3, (int32_t)(ulp_c2 - ulp_c3), xSemaphoreTake(sem_ulp, 0) ? '*' : ' ');
     vTaskDelay(pdMS_TO_TICKS(100));
   }
