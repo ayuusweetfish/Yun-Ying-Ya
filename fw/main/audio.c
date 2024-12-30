@@ -174,8 +174,11 @@ void audio_task(void *_unused)
 
   while (1) {
     if (!atomic_flag_test_and_set(&request_to_disable)) {
-      // printf("Flag received!\n");
-      ESP_ERROR_CHECK(i2s_disable());
+      printf("Flag received!\n");
+      if (!i2s_channel_paused) {
+        i2s_channel_paused = true;
+        ESP_ERROR_CHECK(i2s_disable());
+      }
     }
     if (i2s_channel_paused) {
       // printf("Blocking!\n");
@@ -239,11 +242,10 @@ void audio_pause()
   // `vTaskSuspend()` followed by `i2s_disable()` hangs,
   // supposedly due to unresolved blocks
   // Here we raise a notification flag and wait for the task to suspend itself
-  i2s_channel_paused = true;
   atomic_flag_clear(&request_to_disable);
   // printf("Flag set!\n");
   // printf("Resuming task\n");
-  // xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
+  xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
   vTaskResume(audio_task_handle);
   while (eTaskGetState(audio_task_handle) != eSuspended) taskYIELD();
 }

@@ -265,7 +265,7 @@ if (0) {
         audio_resume();
       } else if (audio_can_sleep()) {
         ESP_LOGI(TAG, "Can sleep now!");
-        // audio_pause();
+        audio_pause();
         ulp_wakeup_signal = 0;
         ulp_check_power = 1;
         xQueueReset((QueueHandle_t)sem_ulp);
