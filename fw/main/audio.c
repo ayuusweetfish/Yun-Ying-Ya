@@ -106,6 +106,7 @@ void audio_task(void *_unused)
   // fetch & process filtered samples when available
   void process_audio_block()
   {
+    // printf("Processing audio block\n");
     // ESP-SR calls for 16-bit samples, convert here
     for (int i = 0; i < buf_count; i++) buf16[i] = buf32[i] >> 16;
     afe_handle->feed(afe_data, buf16);
@@ -164,17 +165,22 @@ void audio_task(void *_unused)
           led_set_state(LED_STATE_WAIT_RESPONSE, 1500);
           ESP_LOGI(TAG, "Pausing audio processing, as we wait for a run");
           // Directly raise the flag, since `audio_pause()` results in a deadlock
-          xTaskNotifyIndexed(audio_task_handle, 0, 0, eNoAction);
+          xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
         }
       }
     }
+    // printf("Processing audio block done\n");
   }
 
   while (1) {
-    xTaskNotifyWaitIndexed(/* index */ 0, 0, 0, NULL, 0);
     if (!atomic_flag_test_and_set(&request_to_disable)) {
+      // printf("Flag received!\n");
       ESP_ERROR_CHECK(i2s_disable());
+    }
+    if (i2s_channel_paused) {
+      // printf("Blocking!\n");
       vTaskSuspend(audio_task_handle);
+      xTaskNotifyWaitIndexed(/* index */ 0, 0, 0, NULL, portMAX_DELAY);
     }
     if (external_push_buf != 0) {
       const int32_t *buf = external_push_buf;
@@ -222,6 +228,7 @@ void audio_push(const int32_t *buf, size_t size, size_t start, size_t count)
   external_push_start = start;
   external_push_count = count;
   xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
+  vTaskResume(audio_task_handle);
   while (external_push_buf != NULL) taskYIELD();
 }
 
@@ -232,7 +239,10 @@ void audio_pause()
   // Here we raise a notification flag and wait for the task to suspend itself
   i2s_channel_paused = true;
   atomic_flag_clear(&request_to_disable);
-  xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
+  // printf("Flag set!\n");
+  // printf("Resuming task\n");
+  // xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
+  vTaskResume(audio_task_handle);
   while (eTaskGetState(audio_task_handle) != eSuspended) taskYIELD();
 }
 
