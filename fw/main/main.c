@@ -115,12 +115,14 @@ if (0) {
   // I2S input
   i2s_init();
 
+if (0) {
   // Audio processing
   audio_init();
 
   // Audio is paused on startup
   audio_resume();
   audio_pause();
+}
 
   rtc_clk_fast_src_set(SOC_RTC_FAST_CLK_SRC_XTAL_D2);
 
@@ -173,19 +175,24 @@ if (0) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
-if (0) {
+if (1) {
   ulp_check_power = 0;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   printf("Starting!\n");
   uint32_t last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
+  i2s_enable();
   while (1) {
     vTaskDelay(pdMS_TO_TICKS(20));
     uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
     // audio_push((const int32_t *)&ulp_audio_buf, 1024, last_push, (cur_push - last_push + 1024) % 1024);
 
+    static int32_t b[32000] = { 0 };
+    static size_t ptr_b = 0;
+
     static uint16_t a[32000];
     static uint32_t ptr = 0;
     for (uint32_t i = last_push; i != cur_push; i = (i + 64) % 1024) {
+      if (ptr_b < 32000) i2s_read(b, &ptr_b, ptr_b + 64 < 32000 ? ptr_b + 64 : 32000);
       for (uint32_t j = 0; j < 64; j++)
         a[ptr + j] = (&ulp_audio_buf)[i + j];
       uint32_t power = 0;
@@ -203,8 +210,16 @@ if (0) {
         // Dump
         // ESP_LOG_BUFFER_HEX(TAG, a, sizeof a);
         putchar('\n');
+        printf("== by ULP ==\n");
         for (int i = 0; i < 32000; i += 320) {
           for (int j = 0; j < 320; j++) printf("%04" PRIx16, a[i + j]);
+          putchar('\n');
+          vTaskDelay(1);
+        }
+        putchar('\n');
+        printf("== by I2S ==\n");
+        for (int i = 0; i < 32000; i += 320) {
+          for (int j = 0; j < 320; j++) printf("%04" PRIx16, (int16_t)(b[i + j] >> 16));
           putchar('\n');
           vTaskDelay(1);
         }
