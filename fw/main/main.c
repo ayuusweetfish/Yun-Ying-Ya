@@ -173,7 +173,7 @@ if (0) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
-if (0) {
+if (1) {
   ulp_check_power = 1;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   printf("Starting!\n");
@@ -185,10 +185,10 @@ if (0) {
 
     static uint16_t a[32000];
     static uint32_t ptr = 0;
-    for (uint32_t i = last_push; i != cur_push; i = (i + 64) % 1024) {
-      for (uint32_t j = 0; j < 64; j++)
+    for (uint32_t i = last_push; i != cur_push; i = (i + 256) % 1024) {
+      for (uint32_t j = 0; j < 256; j++)
         a[ptr + j] += (&ulp_audio_buf)[i + j];
-      ptr += 64;
+      ptr += 256;
       if (ptr == 32000) {
         printf("End! cycles = %u\n", (unsigned)ulp_c1);
         // Dump
@@ -217,7 +217,7 @@ if (0) {
   while (0) {
     static bool n_first = false; if (!n_first) { n_first = true; audio_pause(); }
     xSemaphoreTake(sem_ulp, portMAX_DELAY);
-    ESP_LOGI(TAG, "Wake up: %" PRIu32 " %04" PRIx32 " %" PRIu32 " power=%10" PRIu32 " background=%10" PRIu32, ulp_wakeup_count, ulp_c0, ulp_c1, ulp_c2, ulp_c3);
+    ESP_LOGI(TAG, "Wake up: %04" PRIx32 " %" PRIu32 " power=%10" PRIu32 " background=%10" PRIu32, ulp_c0, ulp_c1, ulp_c2, ulp_c3);
     // ~800 cycles for 24 bits
 
     led_set_state(LED_STATE_CONN_CHECK, 200);
@@ -240,6 +240,11 @@ if (0) {
 
   ulp_check_power = 1;
 
+  while (1) {
+    ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " background=%10" PRIu32 " diff=%10" PRId32 " %c", ulp_c2, ulp_c3, (int32_t)(ulp_c2 - ulp_c3), xSemaphoreTake(sem_ulp, 0) ? '*' : ' ');
+    vTaskDelay(pdMS_TO_TICKS(100));
+  }
+
   enum {
     STATE_LISTEN,
     STATE_SPEECH,
@@ -247,7 +252,7 @@ if (0) {
   int last_sent = 0;
   uint32_t last_push = 0;
   while (1) {
-    vTaskDelay(20 / portTICK_PERIOD_MS);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
     if (state == STATE_LISTEN) {
       // Push data in
       uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
@@ -272,7 +277,7 @@ if (0) {
         xSemaphoreTake(sem_ulp, portMAX_DELAY);
         ESP_LOGI(TAG, "Resuming now!");
         last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
-        audio_push((const int32_t *)&ulp_audio_buf, 1024, (last_push - 768 + 1024) % 1024, 768);
+        audio_push((const int32_t *)&ulp_audio_buf, 1024, (last_push - 512 + 1024) % 1024, 768);
         audio_clear_can_sleep();
         ulp_check_power = 0;
         // audio_resume();
