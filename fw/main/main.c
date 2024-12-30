@@ -173,7 +173,8 @@ if (0) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
-if (1) {
+if (0) {
+  ulp_check_power = 1;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   printf("Starting!\n");
   uint32_t last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
@@ -237,6 +238,8 @@ if (1) {
   // Streaming POST request handle
   post_handle_t *p = post_create();
 
+  ulp_check_power = 1;
+
   enum {
     STATE_LISTEN,
     STATE_SPEECH,
@@ -264,12 +267,14 @@ if (1) {
         ESP_LOGI(TAG, "Can sleep now!");
         // audio_pause();
         ulp_wakeup_signal = 0;
+        ulp_check_power = 1;
         xQueueReset((QueueHandle_t)sem_ulp);
         xSemaphoreTake(sem_ulp, portMAX_DELAY);
         ESP_LOGI(TAG, "Resuming now!");
         last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
         audio_push((const int32_t *)&ulp_audio_buf, 1024, (last_push - 768 + 1024) % 1024, 768);
         audio_clear_can_sleep();
+        ulp_check_power = 0;
         // audio_resume();
         continue;
       }
@@ -299,6 +304,7 @@ if (1) {
         }
         audio_resume();
         vTaskDelay(100 / portTICK_PERIOD_MS);
+        ulp_check_power = 1;
         audio_clear_wake_state();
         ESP_LOGI(TAG, "Finished running, resuming audio listen!");
       }
