@@ -38,6 +38,13 @@ void app_main(void)
     .light_sleep_enable = true,
   }));
 
+while (0) {
+  vTaskDelay(pdMS_TO_TICKS(1000));
+  led_set_state(LED_STATE_IDLE, 500);
+  vTaskDelay(pdMS_TO_TICKS(1000));
+  led_set_state(LED_STATE_STARTUP, 500);
+}
+
   // Battery fuel gauge
 if (0) {
   while (!gauge_init()) {
@@ -166,9 +173,12 @@ if (0) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
+if (1) {
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+  printf("Starting!\n");
+  uint32_t last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
   while (1) {
     vTaskDelay(pdMS_TO_TICKS(20));
-    static uint32_t last_push = 0;
     uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
     // audio_push((const int32_t *)&ulp_audio_buf, 1024, last_push, (cur_push - last_push + 1024) % 1024);
 
@@ -179,7 +189,7 @@ if (0) {
         a[ptr + j] += (&ulp_audio_buf)[i + j];
       ptr += 64;
       if (ptr == 32000) {
-        printf("End!\n");
+        printf("End! cycles = %u\n", (unsigned)ulp_c1);
         // Dump
         // ESP_LOG_BUFFER_HEX(TAG, a, sizeof a);
         putchar('\n');
@@ -199,6 +209,7 @@ if (0) {
 
     last_push = cur_push;
   }
+}
 
   esp_sleep_enable_ulp_wakeup();
 
