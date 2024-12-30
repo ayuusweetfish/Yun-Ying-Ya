@@ -193,7 +193,9 @@ void audio_task(void *_unused)
         uint32_t n_1 = min(count, buf_count - n);
         n_1 = min(n_1, size - start);
         assert(n_1 > 0);  // Assumes n != buf_count && start != size
-        memcpy(buf32 + n, buf + start, n_1 * sizeof(int32_t));
+        // memcpy(buf32 + n, buf + start, n_1 * sizeof(int32_t));
+        for (uint32_t i = 0; i < n_1; i++)
+          buf32[n + i] = buf[start + i] << 16;
         n += n_1;
         start += n_1;
         count -= n_1;

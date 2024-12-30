@@ -188,32 +188,44 @@ if (0) {
   // Streaming POST request handle
   post_handle_t *p = post_create();
 
+  // Audio is paused on startup
   audio_resume();
+  audio_pause();
 
   enum {
     STATE_LISTEN,
     STATE_SPEECH,
   } state = STATE_LISTEN;
   int last_sent = 0;
+  uint32_t last_push = 0;
   while (1) {
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
     if (state == STATE_LISTEN) {
+      // Push data in
+      uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
+      // printf("Push data (%u)\n", (unsigned)((cur_push - last_push + 1024) % 1024));
+      if (last_push != cur_push) {
+        audio_push((const int32_t *)&ulp_audio_buf, 1024, last_push, (cur_push - last_push + 1024) % 1024);
+        last_push = cur_push;
+      }
       if (audio_wake_state() != 0) {
         printf("Wake-up word detected\n");
         state = STATE_SPEECH;
         led_set_state(LED_STATE_SPEECH, 500);
         last_sent = 0;
-        post_open(p);
+        // post_open(p);
+        audio_resume();
       } else if (audio_can_sleep()) {
         ESP_LOGI(TAG, "Can sleep now!");
-        audio_pause();
+        // audio_pause();
         ulp_wakeup_signal = 0;
         xQueueReset((QueueHandle_t)sem_ulp);
         xSemaphoreTake(sem_ulp, portMAX_DELAY);
         ESP_LOGI(TAG, "Resuming now!");
-        audio_push((const int32_t *)&ulp_audio_buf, 1024, (ulp_cur_buf_ptr - 768 + 1024) % 1024, 768);
+        last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
+        audio_push((const int32_t *)&ulp_audio_buf, 1024, (last_push - 768 + 1024) % 1024, 768);
         audio_clear_can_sleep();
-        audio_resume();
+        // audio_resume();
         continue;
       }
     }
@@ -223,12 +235,13 @@ if (0) {
       printf("Speech buffer size %d\n", n);
       // Send new samples to the server
       if (n > last_sent) {
-        post_write(p, audio_speech_buffer() + last_sent, (n - last_sent) * sizeof(int16_t));
+        // post_write(p, audio_speech_buffer() + last_sent, (n - last_sent) * sizeof(int16_t));
         last_sent = n;
       }
       if (is_ended) {
+        audio_pause();
         state = STATE_LISTEN;
-        const char *s = post_finish(p);
+        const char *s = NULL; // post_finish(p);
         printf("Result: %s\n", s != NULL ? s : "(null)");
         if (s != NULL && led_set_program(s)) {
           led_set_state(LED_STATE_RUN, 500);

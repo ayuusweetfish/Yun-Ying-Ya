@@ -187,7 +187,7 @@ int main()
     // c0 = audio_buf[0];
     // c2 = power;
     // c3 = background_power;
-    cur_buf_ptr = block + 64;
+    cur_buf_ptr = (block + 64) % 1024;
     if (power >= 64 * 160000 / 64) {
       if (++successive >= 4) {
         successive = 4;
@@ -198,6 +198,6 @@ int main()
       successive -= 2;
       if (successive < 0) successive = 0;
     }
-    block = (block + 64) % 1024;
+    block = cur_buf_ptr;
   }
 }
