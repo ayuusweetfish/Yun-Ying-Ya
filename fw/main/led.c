@@ -20,6 +20,12 @@ static led_strip_handle_t led_strip;
 #if USE_LED_PWM
 #include "driver/ledc.h"
 #include "driver/gpio.h"
+#include "driver/mcpwm_timer.h"
+#include "driver/mcpwm_oper.h"
+#include "driver/mcpwm_cmpr.h"
+#include "driver/mcpwm_gen.h"
+#include "driver/mcpwm_sync.h"
+#include "driver/mcpwm_cap.h"
 #include "esp_sleep.h"
 #include "soc/ledc_reg.h"
 #endif
@@ -119,7 +125,7 @@ if (0) {
     .timer_sel = LEDC_TIMER_2,
     .gpio_num = PIN_I2S_WS,
     .duty = 0b10000000000,
-    .hpoint = 20,
+    .hpoint = 21,
   }));
 
 void reset_timers()
@@ -152,7 +158,42 @@ void reset_timers()
   );
 }
 
-  reset_timers();
+  // reset_timers();
+
+  mcpwm_timer_handle_t tim0;
+  ESP_ERROR_CHECK(mcpwm_new_timer(&(mcpwm_timer_config_t){
+    .group_id = 0,
+    .clk_src = MCPWM_TIMER_CLK_SRC_PLL160M,
+    .resolution_hz = 160000000,
+    .count_mode = MCPWM_TIMER_COUNT_MODE_UP,
+    .period_ticks = 100,
+  }, &tim0));
+
+  mcpwm_cap_timer_handle_t tim1;
+  ESP_ERROR_CHECK(mcpwm_new_capture_timer(&(mcpwm_capture_timer_config_t){
+    .group_id = 0,
+    .clk_src = MCPWM_TIMER_CLK_SRC_PLL160M,
+  }, &tim1));
+
+  mcpwm_oper_handle_t op1;
+  ESP_ERROR_CHECK(mcpwm_new_operator(&(mcpwm_operator_config_t){
+    .group_id = 0,
+    .flags.update_gen_action_on_sync = 1,
+  }, &op1));
+  ESP_ERROR_CHECK(mcpwm_operator_connect_timer(op1, tim0));
+
+  mcpwm_cmpr_handle_t cmp1;
+  ESP_ERROR_CHECK(mcpwm_new_comparator(op1, &(mcpwm_comparator_config_t){
+    .flags.update_cmp_on_sync = 1,
+  }, &cmp1));
+
+  mcpwm_gen_handle_t gen1;
+  ESP_ERROR_CHECK(mcpwm_new_generator(op1, &(mcpwm_generator_config_t){
+    .gen_gpio_num = PIN_I2S_WS,
+  }, &gen1));
+
+  ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(gen1,
+    MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, cmp1, MCPWM_GEN_ACTION_TOGGLE)));
 
   ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_ON));
   for (int i = 0; i < 3; i++) {

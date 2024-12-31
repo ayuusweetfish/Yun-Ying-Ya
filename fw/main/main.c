@@ -38,7 +38,7 @@ void app_main(void)
     .light_sleep_enable = true,
   }));
 
-while (1) {
+while (0) {
   vTaskDelay(pdMS_TO_TICKS(1000));
   led_set_state(LED_STATE_IDLE, 500);
   vTaskDelay(pdMS_TO_TICKS(1000));
@@ -115,7 +115,7 @@ if (0) {
   // I2S input
   i2s_init();
 
-if (0) {
+if (1) {
   // Audio processing
   audio_init();
 
@@ -175,7 +175,7 @@ if (0) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
-if (1) {
+if (0) {
   ulp_check_power = 0;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   printf("Starting!\n");
@@ -184,17 +184,16 @@ if (1) {
   while (1) {
     vTaskDelay(pdMS_TO_TICKS(20));
     uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
-    // audio_push((const int32_t *)&ulp_audio_buf, 1024, last_push, (cur_push - last_push + 1024) % 1024);
 
     static int32_t b[32000] = { 0 };
     static size_t ptr_b = 0;
 
     static uint16_t a[32000];
     static uint32_t ptr = 0;
-    for (uint32_t i = last_push; i != cur_push; i = (i + 64) % 1024) {
+    for (uint32_t i = last_push; i != cur_push; i = (i + 64) % 2048) {
       if (ptr_b < 32000) i2s_read(b, &ptr_b, ptr_b + 64 < 32000 ? ptr_b + 64 : 32000);
       for (uint32_t j = 0; j < 64; j++)
-        a[ptr + j] = (&ulp_audio_buf)[i + j];
+        a[ptr + j] = ((int16_t *)&ulp_audio_buf)[i + j];
       uint32_t power = 0;
       int16_t last_s16 = (int16_t)a[ptr];
       for (uint32_t j = 1; j < 64; j++) {
@@ -264,7 +263,7 @@ if (1) {
 
   ulp_check_power = 1;
 
-  while (0) {
+  while (1) {
     ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " background=%10" PRIu32 " diff=%10" PRId32 " %c", ulp_c2, ulp_c3, (int32_t)(ulp_c2 - ulp_c3), xSemaphoreTake(sem_ulp, 0) ? '*' : ' ');
     vTaskDelay(pdMS_TO_TICKS(100));
   }
@@ -275,16 +274,23 @@ if (1) {
   } state = STATE_LISTEN;
   int last_sent = 0;
   uint32_t last_push = 0;
+  void buf_push(uint32_t last_push, uint32_t cur_push)
+  {
+    if (last_push == cur_push) return;
+    const int16_t *in_buf = (const int16_t *)&ulp_audio_buf;
+    static int32_t buf[2048];
+    uint32_t p = 0;
+    for (uint32_t i = last_push; i != cur_push; i = (i + 1) % 2048)
+      buf[p++] = in_buf[i];
+    audio_push(buf, p);
+  }
   while (1) {
     vTaskDelay(10 / portTICK_PERIOD_MS);
     if (state == STATE_LISTEN) {
       // Push data in
       uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
-      // printf("Push data (%u)\n", (unsigned)((cur_push - last_push + 1024) % 1024));
-      if (last_push != cur_push) {
-        audio_push((const int32_t *)&ulp_audio_buf, 1024, last_push, (cur_push - last_push + 1024) % 1024);
-        last_push = cur_push;
-      }
+      buf_push(last_push, cur_push);
+      last_push = cur_push;
       if (audio_wake_state() != 0) {
         printf("Wake-up word detected\n");
         state = STATE_SPEECH;
@@ -301,7 +307,7 @@ if (1) {
         xSemaphoreTake(sem_ulp, portMAX_DELAY);
         ESP_LOGI(TAG, "Resuming now!");
         last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
-        audio_push((const int32_t *)&ulp_audio_buf, 1024, (last_push - 768 + 1024) % 1024, 768);
+        buf_push((last_push - 1536 + 2048) % 2048, last_push);
         audio_clear_can_sleep();
         ulp_check_power = 0;
         // audio_resume();

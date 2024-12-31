@@ -13,7 +13,7 @@ volatile uint32_t check_power = 0;
 
 uint32_t c0 = 0, c1 = 0, c2 = 0, c3 = 0;
 
-uint32_t audio_buf[1024];
+uint16_t audio_buf[2048];
 uint32_t cur_buf_ptr;
 
 #pragma GCC push_options
@@ -27,12 +27,13 @@ static inline uint32_t read()
 
   // Wait for WS falling edge
   // while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
-  while (((b0 = REG_READ(RTC_GPIO_IN_REG)) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
-  uint32_t t = ULP_RISCV_GET_CCOUNT();
+  while ((b0 = (REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE)))) != 0) { }
+  // uint32_t t = ULP_RISCV_GET_CCOUNT();
 
   uint32_t addr;
   __asm__ volatile (
     "lui %[addr], 0xa\n"  // Address: 0xa424 (main CPU 0x60008424)
+    // "lw %[b0], 0x424(%[addr])\n"
     "lw %[b1], 0x424(%[addr])\n"
     "lw %[b2], 0x424(%[addr])\n"
     "lw %[b3], 0x424(%[addr])\n"
@@ -53,10 +54,10 @@ static inline uint32_t read()
     "lw %[b18], 0x424(%[addr])\n"
     "lw %[b19], 0x424(%[addr])\n"
     "lw %[b20], 0x424(%[addr])\n"
+  /*
     "lw %[b21], 0x424(%[addr])\n"
     "lw %[b22], 0x424(%[addr])\n"
     "lw %[b23], 0x424(%[addr])\n"
-  /*
     "lw %[b24], 0x424(%[addr])\n"
     "lw %[b25], 0x424(%[addr])\n"
   */
@@ -114,10 +115,10 @@ if (((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b16 >> (10 + PIN_I2S_BCK_PROBE
 if (((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+/*
 if (((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b21 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b22 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-/*
 if (((b24 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b24 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b24 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b25 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b26 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b26 >> (10 + PIN_I2S_DIN)) & 1); n++; }
@@ -133,7 +134,7 @@ if (((b31 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b30 >> (10 + PIN_I2S_BCK_PROBE
   x <<= (17 - n);
   x &= 0xffff;
 
-  c1 = ULP_RISCV_GET_CCOUNT() - t;
+  // c1 = ULP_RISCV_GET_CCOUNT() - t;
 
   return x;
 }
@@ -148,11 +149,12 @@ static inline uint32_t read_less()
   // Wait for WS falling edge
   // while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
   while (((b0 = REG_READ(RTC_GPIO_IN_REG)) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
-  uint32_t t = ULP_RISCV_GET_CCOUNT();
+  // uint32_t t = ULP_RISCV_GET_CCOUNT();
 
   uint32_t addr;
   __asm__ volatile (
     "lui %[addr], 0xa\n"  // Address: 0xa424 (main CPU 0x60008424)
+    // "lw %[b0], 0x424(%[addr])\n"
     "lw %[b1], 0x424(%[addr])\n"
     "lw %[b2], 0x424(%[addr])\n"
     "lw %[b3], 0x424(%[addr])\n"
@@ -253,7 +255,7 @@ if (((b31 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b30 >> (10 + PIN_I2S_BCK_PROBE
   x <<= (17 - n);
   x &= 0xffff;
 
-  c1 = ULP_RISCV_GET_CCOUNT() - t;
+  // c1 = ULP_RISCV_GET_CCOUNT() - t;
 
   return x;
 }
@@ -286,7 +288,7 @@ int main()
         power += (uint32_t)(s_diff * s_diff) / 64;
         last_s16 = s16;
       }
-      cur_buf_ptr = block = (block + 64) % 1024;
+      cur_buf_ptr = block = (block + 64) % 2048;
       c2 = power;
       if (power >= 20000) {
         if (++successive >= 4) {
@@ -304,7 +306,7 @@ int main()
         uint32_t sample = read();
         audio_buf[block + i] = sample;
       }
-      cur_buf_ptr = block = (block + 64) % 1024;
+      cur_buf_ptr = block = (block + 64) % 2048;
     }
   }
 }
