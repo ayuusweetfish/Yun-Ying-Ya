@@ -124,11 +124,15 @@ if (0) {
   // Reset counters to minimise desync
   uint32_t cfg1 = REG_READ(LEDC_LSTIMER1_CONF_REG);
   uint32_t cfg2 = REG_READ(LEDC_LSTIMER2_CONF_REG);
-  // WS needs to fall before/in sync with BCK, not after, so reset timer 1 first
-  REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2 | LEDC_LSTIMER2_RST);
-  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1 | LEDC_LSTIMER1_RST);
-  REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2 & ~LEDC_LSTIMER1_RST);
-  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1 & ~LEDC_LSTIMER1_RST);
+  uint32_t cfg1_rst = cfg1 | LEDC_LSTIMER1_RST;
+  uint32_t cfg2_rst = cfg2 | LEDC_LSTIMER2_RST;
+  uint32_t cfg1_rst_clr = cfg1 & ~LEDC_LSTIMER1_RST;
+  uint32_t cfg2_rst_clr = cfg2 & ~LEDC_LSTIMER2_RST;
+  // WS needs to fall before/in sync with BCK, not after, so reset timer 2 first
+  REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst);
+  REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst_clr);
+  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst);
+  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst_clr);
 
   ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_ON));
   for (int i = 0; i < 3; i++) {

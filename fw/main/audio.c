@@ -252,8 +252,8 @@ void audio_pause()
 
 void audio_resume()
 {
+  if (i2s_channel_paused) ESP_ERROR_CHECK(i2s_enable());
   i2s_channel_paused = false;
-  ESP_ERROR_CHECK(i2s_enable());
   xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
   vTaskResume(audio_task_handle);
 }

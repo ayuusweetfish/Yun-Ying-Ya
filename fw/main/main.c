@@ -301,7 +301,7 @@ if (1) {
         xSemaphoreTake(sem_ulp, portMAX_DELAY);
         ESP_LOGI(TAG, "Resuming now!");
         last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
-        audio_push((const int32_t *)&ulp_audio_buf, 1024, (last_push - 512 + 1024) % 1024, 768);
+        audio_push((const int32_t *)&ulp_audio_buf, 1024, (last_push - 768 + 1024) % 1024, 768);
         audio_clear_can_sleep();
         ulp_check_power = 0;
         // audio_resume();
