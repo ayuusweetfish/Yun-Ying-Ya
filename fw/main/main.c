@@ -38,7 +38,7 @@ void app_main(void)
     .light_sleep_enable = true,
   }));
 
-while (0) {
+while (1) {
   vTaskDelay(pdMS_TO_TICKS(1000));
   led_set_state(LED_STATE_IDLE, 500);
   vTaskDelay(pdMS_TO_TICKS(1000));

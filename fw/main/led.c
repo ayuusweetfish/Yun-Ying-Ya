@@ -121,6 +121,8 @@ if (0) {
     .duty = 0b10,
   }));
 
+void reset_timers()
+{
   // Reset counters to minimise desync
   uint32_t cfg1 = REG_READ(LEDC_LSTIMER1_CONF_REG);
   uint32_t cfg2 = REG_READ(LEDC_LSTIMER2_CONF_REG);
@@ -128,11 +130,28 @@ if (0) {
   uint32_t cfg2_rst = cfg2 | LEDC_LSTIMER2_RST;
   uint32_t cfg1_rst_clr = cfg1 & ~LEDC_LSTIMER1_RST;
   uint32_t cfg2_rst_clr = cfg2 & ~LEDC_LSTIMER2_RST;
-  // WS needs to fall before/in sync with BCK, not after, so reset timer 2 first
+  // WS needs to fall slightly before/in sync with BCK, not before, so reset timer 2 first
+/*
   REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst);
-  REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst_clr);
   REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst);
+  REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst_clr);
   REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst_clr);
+*/
+  asm volatile (
+    "s32i %[value_2a], %[addr], %[offs_2]\n" "memw\n"
+    "s32i %[value_1a], %[addr], %[offs_1]\n" "memw\n"
+    "s32i %[value_2b], %[addr], %[offs_2]\n" "memw\n"
+    "s32i %[value_1b], %[addr], %[offs_1]\n" "memw\n"
+    :: [addr] "r" (LEDC_LSTIMER1_CONF_REG),
+       [offs_1] "i" (0),
+       [offs_2] "i" ((uint8_t *)LEDC_LSTIMER2_CONF_REG - (uint8_t *)LEDC_LSTIMER1_CONF_REG),
+       [value_1a] "r" (cfg1_rst), [value_1b] "r" (cfg1_rst_clr),
+       [value_2a] "r" (cfg2_rst), [value_2b] "r" (cfg2_rst_clr)
+    : "memory"
+  );
+}
+
+  reset_timers();
 
   ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_ON));
   for (int i = 0; i < 3; i++) {
