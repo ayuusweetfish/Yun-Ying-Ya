@@ -133,15 +133,23 @@ void reset_timers()
   // WS needs to fall slightly before/in sync with BCK, not before, so reset timer 2 first
 /*
   REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst);
-  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst);
   REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst_clr);
+  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst);
   REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst_clr);
 */
   asm volatile (
-    "s32i %[value_2a], %[addr], %[offs_2]\n" "memw\n"
     "s32i %[value_1a], %[addr], %[offs_1]\n" "memw\n"
-    "s32i %[value_2b], %[addr], %[offs_2]\n" "memw\n"
     "s32i %[value_1b], %[addr], %[offs_1]\n" "memw\n"
+    "nop\n"
+    "nop\n"
+    "nop\n"
+    "nop\n"
+    "nop\n"
+    "nop\n"
+    "nop\n"
+    "nop\n"
+    "s32i %[value_2a], %[addr], %[offs_2]\n" "memw\n"
+    "s32i %[value_2b], %[addr], %[offs_2]\n" "memw\n"
     :: [addr] "r" (LEDC_LSTIMER1_CONF_REG),
        [offs_1] "i" (0),
        [offs_2] "i" ((uint8_t *)LEDC_LSTIMER2_CONF_REG - (uint8_t *)LEDC_LSTIMER1_CONF_REG),
