@@ -94,7 +94,7 @@ if (0) {
 
   ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
-    .duty_resolution = LEDC_TIMER_2_BIT,
+    .duty_resolution = LEDC_TIMER_5_BIT,
     .timer_num = LEDC_TIMER_1,
     .freq_hz = 1024000,
     .clk_cfg = LEDC_USE_XTAL_CLK,
@@ -104,11 +104,11 @@ if (0) {
     .channel = LEDC_CHANNEL_3,
     .timer_sel = LEDC_TIMER_1,
     .gpio_num = PIN_I2S_BCK,
-    .duty = 0b10,
+    .duty = 0b10000,
   }));
   ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
-    .duty_resolution = LEDC_TIMER_2_BIT,
+    .duty_resolution = LEDC_TIMER_11_BIT,
     .timer_num = LEDC_TIMER_2,
     .freq_hz = 16000,
     .clk_cfg = LEDC_USE_XTAL_CLK,
@@ -118,7 +118,8 @@ if (0) {
     .channel = LEDC_CHANNEL_4,
     .timer_sel = LEDC_TIMER_2,
     .gpio_num = PIN_I2S_WS,
-    .duty = 0b10,
+    .duty = 0b10000000000,
+    .hpoint = 20,
   }));
 
 void reset_timers()
@@ -130,7 +131,7 @@ void reset_timers()
   uint32_t cfg2_rst = cfg2 | LEDC_LSTIMER2_RST;
   uint32_t cfg1_rst_clr = cfg1 & ~LEDC_LSTIMER1_RST;
   uint32_t cfg2_rst_clr = cfg2 & ~LEDC_LSTIMER2_RST;
-  // WS needs to fall slightly before/in sync with BCK, not before, so reset timer 2 first
+  // WS needs to fall slightly before/in sync with BCK, not after, so reset timer 2 first
 /*
   REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst);
   REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst_clr);
@@ -138,18 +139,10 @@ void reset_timers()
   REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst_clr);
 */
   asm volatile (
-    "s32i %[value_1a], %[addr], %[offs_1]\n" "memw\n"
-    "s32i %[value_1b], %[addr], %[offs_1]\n" "memw\n"
-    "nop\n"
-    "nop\n"
-    "nop\n"
-    "nop\n"
-    "nop\n"
-    "nop\n"
-    "nop\n"
-    "nop\n"
     "s32i %[value_2a], %[addr], %[offs_2]\n" "memw\n"
+    "s32i %[value_1a], %[addr], %[offs_1]\n" "memw\n"
     "s32i %[value_2b], %[addr], %[offs_2]\n" "memw\n"
+    "s32i %[value_1b], %[addr], %[offs_1]\n" "memw\n"
     :: [addr] "r" (LEDC_LSTIMER1_CONF_REG),
        [offs_1] "i" (0),
        [offs_2] "i" ((uint8_t *)LEDC_LSTIMER2_CONF_REG - (uint8_t *)LEDC_LSTIMER1_CONF_REG),
