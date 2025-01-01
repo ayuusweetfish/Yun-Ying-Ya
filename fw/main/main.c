@@ -263,9 +263,11 @@ if (1) {
 
   ulp_check_power = 1;
 
-  while (0) {
-    ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " background=%10" PRIu32 " diff=%10" PRId32 " %c", ulp_c2, ulp_c3, (int32_t)(ulp_c2 - ulp_c3), xSemaphoreTake(sem_ulp, 0) ? '*' : ' ');
-    vTaskDelay(pdMS_TO_TICKS(100));
+  while (1) {
+    bool waken = xSemaphoreTake(sem_ulp, 0);
+    ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " background=%10" PRIu32 " diff=%10" PRId32 " %c", ulp_c2, ulp_c3, (int32_t)(ulp_c2 - ulp_c3), waken ? '*' : ' ');
+    led_set_state(waken ? LED_STATE_SPEECH : LED_STATE_IDLE, 50);
+    vTaskDelay(pdMS_TO_TICKS(50));
   }
 
   enum {

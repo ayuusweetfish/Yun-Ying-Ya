@@ -125,7 +125,7 @@ if (0) {
     .channel = LEDC_CHANNEL_4,
     .timer_sel = LEDC_TIMER_2,
     .gpio_num = PIN_I2S_WS,
-    .duty = 0b10000000000 - 15,
+    .duty = 0b10000000000,
     .hpoint = 21,
   }));
 
@@ -458,7 +458,8 @@ static inline struct tint state_render(enum led_state_t state, uint32_t time)
     return (struct tint){ 0, 0, 1 };
 
   case LED_STATE_SPEECH:
-    return (struct tint){ 1, 1, 1 };
+    // return (struct tint){ 1, 1, 1 };
+    return (struct tint){ 0.1f, 0.1f, 0.1f };
 
   case LED_STATE_WAIT_RESPONSE: {
     float t = (float)time / 2000.0f * (float)(M_PI * 2);

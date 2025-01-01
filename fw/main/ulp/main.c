@@ -44,7 +44,6 @@ static inline uint32_t read()
   );
 
   __asm__ volatile (
-    "lw %[b0], 0x424(%[addr])\n"
     "lw %[b1], 0x424(%[addr])\n"
     "lw %[b2], 0x424(%[addr])\n"
     "lw %[b3], 0x424(%[addr])\n"
@@ -62,9 +61,9 @@ static inline uint32_t read()
     "lw %[b15], 0x424(%[addr])\n"
     "lw %[b16], 0x424(%[addr])\n"
     "lw %[b17], 0x424(%[addr])\n"
+  /*
     "lw %[b18], 0x424(%[addr])\n"
     "lw %[b19], 0x424(%[addr])\n"
-  /*
     "lw %[b20], 0x424(%[addr])\n"
     "lw %[b21], 0x424(%[addr])\n"
     "lw %[b22], 0x424(%[addr])\n"
@@ -72,8 +71,7 @@ static inline uint32_t read()
     "lw %[b24], 0x424(%[addr])\n"
     "lw %[b25], 0x424(%[addr])\n"
   */
-    : [b0] "=&r" (b0)
-     ,[b1] "=&r" (b1)
+    : [b1] "=&r" (b1)
      ,[b2] "=&r" (b2)
      ,[b3] "=&r" (b3)
      ,[b4] "=&r" (b4)
@@ -90,9 +88,9 @@ static inline uint32_t read()
      ,[b15] "=&r" (b15)
      ,[b16] "=&r" (b16)
      ,[b17] "=&r" (b17)
+    /*
      ,[b18] "=&r" (b18)
      ,[b19] "=&r" (b19)
-    /*
      ,[b20] "=&r" (b20)
      ,[b21] "=&r" (b21)
      ,[b22] "=&r" (b22)
@@ -106,7 +104,8 @@ static inline uint32_t read()
   uint32_t x = 0;
   uint32_t n = 0;
 if (((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b0 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b1 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b1 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (!((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { n++; }
 if (((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b2 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b3 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b4 >> (10 + PIN_I2S_DIN)) & 1); n++; }
@@ -121,11 +120,11 @@ if (((b12 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b11 >> (10 + PIN_I2S_BCK_PROBE
 if (((b13 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b12 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b13 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b14 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b13 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b14 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b15 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b14 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b15 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+/*
 if (((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b15 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b16 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b17 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-/*
 if (((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b21 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b22 >> (10 + PIN_I2S_DIN)) & 1); n++; }
@@ -292,7 +291,7 @@ int main()
       }
       cur_buf_ptr = block = (block + 64) % 2048;
       c2 = power;
-      if (power >= 20000) {
+      if (power >= 30000) {
         if (++successive >= 4) {
           successive = 4;
           wakeup_signal = 1;
