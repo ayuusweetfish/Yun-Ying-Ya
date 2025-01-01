@@ -23,7 +23,6 @@ static inline uint32_t read()
   uint32_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11,
            b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23,
            b24, b25, b26, b27, b28, b29, b30, b31;
-// ', '.join('b%d' % i for i in range(32))
 
   uint32_t addr;
   __asm__ volatile (
@@ -32,9 +31,6 @@ static inline uint32_t read()
   );
 
   // Wait for WS falling edge
-  // while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
-  // while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
-
   uint32_t scratch;
   __asm__ volatile (
     "1:"
@@ -47,7 +43,6 @@ static inline uint32_t read()
   );
 
   __asm__ volatile (
-    // "lw %[b0], 0x424(%[addr])\n"
     "lw %[b1], 0x424(%[addr])\n"
     "lw %[b2], 0x424(%[addr])\n"
     "lw %[b3], 0x424(%[addr])\n"
@@ -75,9 +70,7 @@ static inline uint32_t read()
     "lw %[b24], 0x424(%[addr])\n"
     "lw %[b25], 0x424(%[addr])\n"
   */
-// ''.join('"lw %%[b%d], 0x424(%%[addr])\\n"\n' % i for i in range(32))
-    : //[b0] "=&r" (b0)
-      [b1] "=&r" (b1)
+    : [b1] "=&r" (b1)
      ,[b2] "=&r" (b2)
      ,[b3] "=&r" (b3)
      ,[b4] "=&r" (b4)
@@ -105,7 +98,6 @@ static inline uint32_t read()
      ,[b25] "=&r" (b25)
     */
     : [addr] "r" (addr)
-// ''.join(' ,[b%d] "=&r" (b%d)\n' % (i, i) for i in range(32))
   );
 
   uint32_t x = 0;
@@ -137,20 +129,10 @@ if (((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b21 >> (10 + PIN_I2S_BCK_PROBE
 if (((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b24 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b24 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b24 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b25 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b26 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b26 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b27 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b26 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b27 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b28 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b27 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b28 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b29 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b28 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b29 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b30 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b29 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b30 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b31 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b30 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b31 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 */
-  // ''.join('if (((b%d >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b%d >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b%d >> (10 + PIN_I2S_DIN)) & 1); n++; }\n' % (i, i - 1, i) for i in range(32))
-  // ''.join('if ((b%d >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b%d >> (10 + PIN_I2S_DIN)) & 1); n++; }\n' % (i, i) for i in range(32))
 
   x <<= (17 - n);
   x &= 0xffff;
-
-  // c1 = ULP_RISCV_GET_CCOUNT() - t;
 
   return x;
 }
@@ -160,17 +142,26 @@ static inline uint32_t read_less()
   uint32_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11,
            b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23,
            b24, b25, b26, b27, b28, b29, b30, b31;
-// ', '.join('b%d' % i for i in range(32))
-
-  // Wait for WS falling edge
-  // while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
-  while (((b0 = REG_READ(RTC_GPIO_IN_REG)) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
-  // uint32_t t = ULP_RISCV_GET_CCOUNT();
 
   uint32_t addr;
   __asm__ volatile (
     "lui %[addr], 0xa\n"  // Address: 0xa424 (main CPU 0x60008424)
-    // "lw %[b0], 0x424(%[addr])\n"
+    : [addr] "=r" (addr)
+  );
+
+  // Wait for WS falling edge
+  uint32_t scratch;
+  __asm__ volatile (
+    "1:"
+    "lw %[b0], 0x424(%[addr])\n"
+    "sll %[scratch], %[b0], 0x11\n"
+    "bltz %[scratch], 1b\n"
+    : [b0] "=&r" (b0)
+     ,[scratch] "=&r" (scratch)
+    : [addr] "r" (addr)
+  );
+
+  __asm__ volatile (
     "lw %[b1], 0x424(%[addr])\n"
     "lw %[b2], 0x424(%[addr])\n"
     "lw %[b3], 0x424(%[addr])\n"
@@ -190,18 +181,15 @@ static inline uint32_t read_less()
     "lw %[b17], 0x424(%[addr])\n"
     "lw %[b18], 0x424(%[addr])\n"
     "lw %[b19], 0x424(%[addr])\n"
-  /*
     "lw %[b20], 0x424(%[addr])\n"
+  /*
     "lw %[b21], 0x424(%[addr])\n"
     "lw %[b22], 0x424(%[addr])\n"
     "lw %[b23], 0x424(%[addr])\n"
     "lw %[b24], 0x424(%[addr])\n"
     "lw %[b25], 0x424(%[addr])\n"
   */
-// ''.join('"lw %%[b%d], 0x424(%%[addr])\\n"\n' % i for i in range(32))
-    : [addr] "=&r" (addr)
-     ,[b0] "=&r" (b0)
-     ,[b1] "=&r" (b1)
+    : [b1] "=&r" (b1)
      ,[b2] "=&r" (b2)
      ,[b3] "=&r" (b3)
      ,[b4] "=&r" (b4)
@@ -221,12 +209,14 @@ static inline uint32_t read_less()
      ,[b18] "=&r" (b18)
      ,[b19] "=&r" (b19)
      ,[b20] "=&r" (b20)
+    /*
      ,[b21] "=&r" (b21)
      ,[b22] "=&r" (b22)
      ,[b23] "=&r" (b23)
      ,[b24] "=&r" (b24)
      ,[b25] "=&r" (b25)
-// ''.join(' ,[b%d] "=&r" (b%d)\n' % (i, i) for i in range(32))
+    */
+    : [addr] "r" (addr)
   );
 
   uint32_t x = 0;
@@ -258,20 +248,10 @@ if (((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b21 >> (10 + PIN_I2S_BCK_PROBE
 if (((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b24 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b24 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b24 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b25 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b26 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b26 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b27 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b26 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b27 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b28 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b27 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b28 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b29 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b28 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b29 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b30 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b29 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b30 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b31 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b30 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b31 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 */
-  // ''.join('if (((b%d >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b%d >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b%d >> (10 + PIN_I2S_DIN)) & 1); n++; }\n' % (i, i - 1, i) for i in range(32))
-  // ''.join('if ((b%d >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b%d >> (10 + PIN_I2S_DIN)) & 1); n++; }\n' % (i, i) for i in range(32))
 
   x <<= (17 - n);
   x &= 0xffff;
-
-  // c1 = ULP_RISCV_GET_CCOUNT() - t;
 
   return x;
 }
