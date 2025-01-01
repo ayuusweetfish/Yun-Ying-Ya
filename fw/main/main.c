@@ -115,7 +115,7 @@ if (0) {
   // I2S input
   i2s_init();
 
-if (1) {
+if (0) {
   // Audio processing
   audio_init();
 
@@ -175,7 +175,7 @@ if (0) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
-if (0) {
+if (1) {
   ulp_check_power = 0;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   printf("Starting!\n");

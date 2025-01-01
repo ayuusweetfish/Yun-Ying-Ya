@@ -25,14 +25,28 @@ static inline uint32_t read()
            b24, b25, b26, b27, b28, b29, b30, b31;
 // ', '.join('b%d' % i for i in range(32))
 
-  // Wait for WS falling edge
-  // while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
-  while ((b0 = (REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE)))) != 0) { }
-  // uint32_t t = ULP_RISCV_GET_CCOUNT();
-
   uint32_t addr;
   __asm__ volatile (
     "lui %[addr], 0xa\n"  // Address: 0xa424 (main CPU 0x60008424)
+    : [addr] "=r" (addr)
+  );
+
+  // Wait for WS falling edge
+  // while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
+  // while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
+
+  uint32_t scratch;
+  __asm__ volatile (
+    "1:"
+    "lw %[b0], 0x424(%[addr])\n"
+    "sll %[scratch], %[b0], 0x11\n"
+    "bltz %[scratch], 1b\n"
+    : [b0] "=&r" (b0)
+     ,[scratch] "=&r" (scratch)
+    : [addr] "r" (addr)
+  );
+
+  __asm__ volatile (
     // "lw %[b0], 0x424(%[addr])\n"
     "lw %[b1], 0x424(%[addr])\n"
     "lw %[b2], 0x424(%[addr])\n"
@@ -62,9 +76,8 @@ static inline uint32_t read()
     "lw %[b25], 0x424(%[addr])\n"
   */
 // ''.join('"lw %%[b%d], 0x424(%%[addr])\\n"\n' % i for i in range(32))
-    : [addr] "=&r" (addr)
-     ,[b0] "=&r" (b0)
-     ,[b1] "=&r" (b1)
+    : //[b0] "=&r" (b0)
+      [b1] "=&r" (b1)
      ,[b2] "=&r" (b2)
      ,[b3] "=&r" (b3)
      ,[b4] "=&r" (b4)
@@ -84,11 +97,14 @@ static inline uint32_t read()
      ,[b18] "=&r" (b18)
      ,[b19] "=&r" (b19)
      ,[b20] "=&r" (b20)
+    /*
      ,[b21] "=&r" (b21)
      ,[b22] "=&r" (b22)
      ,[b23] "=&r" (b23)
      ,[b24] "=&r" (b24)
      ,[b25] "=&r" (b25)
+    */
+    : [addr] "r" (addr)
 // ''.join(' ,[b%d] "=&r" (b%d)\n' % (i, i) for i in range(32))
   );
 

@@ -98,6 +98,7 @@ if (0) {
   vTaskDelay(100 / portTICK_PERIOD_MS);
 }
 
+#if !PIN_I2S_IS_MASTER
   ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
     .duty_resolution = LEDC_TIMER_5_BIT,
@@ -158,8 +159,9 @@ void reset_timers()
   );
 }
 
-  // reset_timers();
+  reset_timers();
 
+if (0) {
   mcpwm_timer_handle_t tim0;
   ESP_ERROR_CHECK(mcpwm_new_timer(&(mcpwm_timer_config_t){
     .group_id = 0,
@@ -194,6 +196,8 @@ void reset_timers()
 
   ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(gen1,
     MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, cmp1, MCPWM_GEN_ACTION_TOGGLE)));
+}
+#endif  // #if !PIN_I2S_IS_MASTER
 
   ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_ON));
   for (int i = 0; i < 3; i++) {
