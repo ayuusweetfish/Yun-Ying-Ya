@@ -35,14 +35,16 @@ static inline uint32_t read()
   __asm__ volatile (
     "1:"
     "lw %[b0], 0x424(%[addr])\n"
-    "sll %[scratch], %[b0], 0x11\n"
+    "sll %[scratch], %[b0], %[shift_amt]\n"
     "bltz %[scratch], 1b\n"
     : [b0] "=&r" (b0)
      ,[scratch] "=&r" (scratch)
-    : [addr] "r" (addr)
+    : [addr] "r" (addr),
+      [shift_amt] "i" (31 - (10 + PIN_I2S_WS_PROBE))
   );
 
   __asm__ volatile (
+    "lw %[b0], 0x424(%[addr])\n"
     "lw %[b1], 0x424(%[addr])\n"
     "lw %[b2], 0x424(%[addr])\n"
     "lw %[b3], 0x424(%[addr])\n"
@@ -62,15 +64,16 @@ static inline uint32_t read()
     "lw %[b17], 0x424(%[addr])\n"
     "lw %[b18], 0x424(%[addr])\n"
     "lw %[b19], 0x424(%[addr])\n"
-    "lw %[b20], 0x424(%[addr])\n"
   /*
+    "lw %[b20], 0x424(%[addr])\n"
     "lw %[b21], 0x424(%[addr])\n"
     "lw %[b22], 0x424(%[addr])\n"
     "lw %[b23], 0x424(%[addr])\n"
     "lw %[b24], 0x424(%[addr])\n"
     "lw %[b25], 0x424(%[addr])\n"
   */
-    : [b1] "=&r" (b1)
+    : [b0] "=&r" (b0)
+     ,[b1] "=&r" (b1)
      ,[b2] "=&r" (b2)
      ,[b3] "=&r" (b3)
      ,[b4] "=&r" (b4)
@@ -89,8 +92,8 @@ static inline uint32_t read()
      ,[b17] "=&r" (b17)
      ,[b18] "=&r" (b18)
      ,[b19] "=&r" (b19)
-     ,[b20] "=&r" (b20)
     /*
+     ,[b20] "=&r" (b20)
      ,[b21] "=&r" (b21)
      ,[b22] "=&r" (b22)
      ,[b23] "=&r" (b23)
@@ -122,8 +125,8 @@ if (((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b15 >> (10 + PIN_I2S_BCK_PROBE
 if (((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b17 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 /*
+if (((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b21 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b22 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; }
@@ -154,14 +157,16 @@ static inline uint32_t read_less()
   __asm__ volatile (
     "1:"
     "lw %[b0], 0x424(%[addr])\n"
-    "sll %[scratch], %[b0], 0x11\n"
+    "sll %[scratch], %[b0], %[shift_amt]\n"
     "bltz %[scratch], 1b\n"
     : [b0] "=&r" (b0)
      ,[scratch] "=&r" (scratch)
-    : [addr] "r" (addr)
+    : [addr] "r" (addr),
+      [shift_amt] "i" (31 - (10 + PIN_I2S_WS_PROBE))
   );
 
   __asm__ volatile (
+    "lw %[b0], 0x424(%[addr])\n"
     "lw %[b1], 0x424(%[addr])\n"
     "lw %[b2], 0x424(%[addr])\n"
     "lw %[b3], 0x424(%[addr])\n"
@@ -181,15 +186,16 @@ static inline uint32_t read_less()
     "lw %[b17], 0x424(%[addr])\n"
     "lw %[b18], 0x424(%[addr])\n"
     "lw %[b19], 0x424(%[addr])\n"
-    "lw %[b20], 0x424(%[addr])\n"
   /*
+    "lw %[b20], 0x424(%[addr])\n"
     "lw %[b21], 0x424(%[addr])\n"
     "lw %[b22], 0x424(%[addr])\n"
     "lw %[b23], 0x424(%[addr])\n"
     "lw %[b24], 0x424(%[addr])\n"
     "lw %[b25], 0x424(%[addr])\n"
   */
-    : [b1] "=&r" (b1)
+    : [b0] "=&r" (b0)
+     ,[b1] "=&r" (b1)
      ,[b2] "=&r" (b2)
      ,[b3] "=&r" (b3)
      ,[b4] "=&r" (b4)
@@ -208,8 +214,8 @@ static inline uint32_t read_less()
      ,[b17] "=&r" (b17)
      ,[b18] "=&r" (b18)
      ,[b19] "=&r" (b19)
-     ,[b20] "=&r" (b20)
     /*
+     ,[b20] "=&r" (b20)
      ,[b21] "=&r" (b21)
      ,[b22] "=&r" (b22)
      ,[b23] "=&r" (b23)
@@ -241,8 +247,8 @@ if (((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b15 >> (10 + PIN_I2S_BCK_PROBE
 if (((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b17 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 /*
+if (((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b21 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b22 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; }
