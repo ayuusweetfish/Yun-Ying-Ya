@@ -1,6 +1,6 @@
 #pragma once
 
-#define BOARD_REV 2
+#define BOARD_REV 1
 
 #if BOARD_REV == 1
   #define PIN_R 17
@@ -19,7 +19,7 @@
   #define PIN_I2S_BCK_PROBE 14
   #define PIN_I2S_WS_PROBE  12
   #define PIN_I2S_LR 1
-  #define PIN_I2S_IS_MASTER 1
+  #define PIN_I2S_IS_MASTER 0
   #define PIN_MIC_EN  15
 #else
   #define PIN_I2S_BCK  1

@@ -61,6 +61,7 @@ if (0) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
+if (0) {
   bool gauge_valid = gauge_init();
   if (gauge_valid) {
     gauge_wake();
@@ -71,6 +72,7 @@ if (0) {
   } else {
     ESP_LOGI(TAG, "Battery fuel gauge not found. Ignoring.");
   }
+}
 
   // NVS
   esp_err_t ret = nvs_flash_init();
@@ -175,7 +177,7 @@ if (0) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
-if (1) {
+if (0) {
   ulp_check_power = 0;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   printf("Starting!\n");
@@ -265,7 +267,21 @@ if (1) {
 
   while (1) {
     bool waken = xSemaphoreTake(sem_ulp, 0);
-    ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " background=%10" PRIu32 " diff=%10" PRId32 " %c", ulp_c2, ulp_c3, (int32_t)(ulp_c2 - ulp_c3), waken ? '*' : ' ');
+    uint16_t sample = ulp_c1; // ((const int16_t *)&ulp_audio_buf)[(ulp_cur_buf_ptr - 1 + 2048) % 2048];
+    ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " sample=%04" PRIx16 " %c", ulp_c2, sample, waken ? '*' : ' ');
+    if (1) {
+      static const int N = 32;
+      uint32_t in[N];
+      for (int i = 0; i < N; i++) in[i] = ((volatile uint32_t *)&ulp_debug)[i] >> 10;
+      char s[N + 1]; s[N] = '\0';
+      for (int i = 0; i < N; i++) s[i] = '0' + ((in[i] >> PIN_I2S_BCK_PROBE) & 1);
+      ESP_LOGI(TAG, "BCK: %s", s);
+      for (int i = 0; i < N; i++) s[i] = '0' + ((in[i] >> PIN_I2S_WS_PROBE) & 1);
+      ESP_LOGI(TAG, " WS: %s", s);
+      for (int i = 0; i < N; i++) s[i] = '0' + ((in[i] >> PIN_I2S_DIN) & 1);
+      ESP_LOGI(TAG, "DIN: %s", s);
+      ESP_LOGI(TAG, "");
+    }
     led_set_state(waken ? LED_STATE_SPEECH : LED_STATE_IDLE, 50);
     vTaskDelay(pdMS_TO_TICKS(50));
   }

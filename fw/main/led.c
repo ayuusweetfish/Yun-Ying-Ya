@@ -125,12 +125,29 @@ if (0) {
     .channel = LEDC_CHANNEL_4,
     .timer_sel = LEDC_TIMER_2,
     .gpio_num = PIN_I2S_WS,
+    .duty = 0b10000000000 - 8,
+    // .hpoint = 14, // diff = 30
+  }));
+  ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_5,
+    .timer_sel = LEDC_TIMER_2,
+    .gpio_num = 10,
+    .duty = 32,
+    // .hpoint = 1024 + 57,
+  }));
+  ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_6,
+    .timer_sel = LEDC_TIMER_2,
+    .gpio_num = 11,
     .duty = 0b10000000000,
-    .hpoint = 21,
   }));
 
 void reset_timers()
 {
+  portDISABLE_INTERRUPTS(); // No need for a critical section
+
   // Reset counters to minimise desync
   uint32_t cfg1 = REG_READ(LEDC_LSTIMER1_CONF_REG);
   uint32_t cfg2 = REG_READ(LEDC_LSTIMER2_CONF_REG);
@@ -146,6 +163,8 @@ void reset_timers()
   REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst_clr);
 */
   asm volatile (
+    "nop\n" "nop\n"
+    "isync\n"
     "s32i %[value_2a], %[addr], %[offs_2]\n" "memw\n"
     "s32i %[value_1a], %[addr], %[offs_1]\n" "memw\n"
     "s32i %[value_2b], %[addr], %[offs_2]\n" "memw\n"
@@ -157,6 +176,40 @@ void reset_timers()
        [value_2a] "r" (cfg2_rst), [value_2b] "r" (cfg2_rst_clr)
     : "memory"
   );
+
+for (int i = 0; i < 6; i++) {
+  uint32_t t1_cnt, t2_cnt;
+  asm volatile (
+    "nop\n" "nop\n"
+    "isync\n"
+    "nop\n" "nop\n"
+    "l32i %[t1_cnt], %[addr], %[offs_1]\n" "memw\n"
+    "l32i %[t2_cnt], %[addr], %[offs_2]\n" "memw\n"
+    : [t1_cnt] "=&r" (t1_cnt),
+      [t2_cnt] "=&r" (t2_cnt)
+    : [addr] "r" (LEDC_LSTIMER1_VALUE_REG),
+      [offs_1] "i" (0),
+      [offs_2] "i" ((uint8_t *)LEDC_LSTIMER2_VALUE_REG - (uint8_t *)LEDC_LSTIMER1_VALUE_REG)
+  );
+
+  t2_cnt %= 32;
+  uint32_t cnt_diff = (t2_cnt - t1_cnt + 32) % 32;
+  REG_WRITE(LEDC_LSCH4_HPOINT_REG, (2048 + (-4 - cnt_diff)) % 2048);
+  REG_SET_BIT(LEDC_LSCH4_CONF0_REG, LEDC_PARA_UP_LSCH4);
+  REG_WRITE(LEDC_LSCH5_HPOINT_REG, (1024 + (40 - cnt_diff)));
+  REG_SET_BIT(LEDC_LSCH5_CONF0_REG, LEDC_PARA_UP_LSCH5);
+  REG_WRITE(LEDC_LSCH6_HPOINT_REG, (2048 + (35 - cnt_diff)) % 2048);
+  REG_SET_BIT(LEDC_LSCH6_CONF0_REG, LEDC_PARA_UP_LSCH6);
+
+  portENABLE_INTERRUPTS();
+  ESP_LOGI(TAG, "Timer 1 resol. %u, Timer 2 resol. %u",
+    (unsigned)REG_GET_FIELD(LEDC_LSTIMER1_CONF_REG, LEDC_LSTIMER1_DUTY_RES),
+    (unsigned)REG_GET_FIELD(LEDC_LSTIMER2_CONF_REG, LEDC_LSTIMER2_DUTY_RES));
+  ESP_LOGI(TAG, "Timer 1 CNT %u, Timer 2 CNT %u, diff = %u",
+    (unsigned)t1_cnt, (unsigned)t2_cnt, (int)cnt_diff);
+  portDISABLE_INTERRUPTS();
+}
+  portENABLE_INTERRUPTS();
 }
 
   reset_timers();
