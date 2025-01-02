@@ -91,9 +91,9 @@ static inline uint32_t read_less()
     "lw %[b13], 0x424(%[addr])\n"
     "lw %[b14], 0x424(%[addr])\n"
     "lw %[b15], 0x424(%[addr])\n"
-  /*
     "lw %[b16], 0x424(%[addr])\n"
     "lw %[b17], 0x424(%[addr])\n"
+  /*
     "lw %[b18], 0x424(%[addr])\n"
     "lw %[b19], 0x424(%[addr])\n"
     "lw %[b20], 0x424(%[addr])\n"
@@ -122,9 +122,9 @@ static inline uint32_t read_less()
      ,[b13] "=&r" (b13)
      ,[b14] "=&r" (b14)
      ,[b15] "=&r" (b15)
-    /*
      ,[b16] "=&r" (b16)
      ,[b17] "=&r" (b17)
+    /*
      ,[b18] "=&r" (b18)
      ,[b19] "=&r" (b19)
      ,[b20] "=&r" (b20)
@@ -141,21 +141,16 @@ static inline uint32_t read_less()
 
   uint32_t x = 0;
 
-if (1 || cycles_end - cycles_start < 87 + 9 * 16 /* number of bits read */) {
+if (cycles_end - cycles_start < 87 + 9 * 18 /* number of bits read */) {
   // This will give very rare glitches due to bus contention (0~5 per second),
   // but it should be very acceptable
   uint32_t n = 0;
-uint32_t set = 0;
-if (!((b0 >> (10 + PIN_I2S_WS_PROBE)) & 1) && !((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set++; }
-if (set >= 2 && ((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b1 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (!((b1 >> (10 + PIN_I2S_WS_PROBE)) & 1) && !((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && ((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set++; }
-if (set >= 2 && ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b2 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (!((b2 >> (10 + PIN_I2S_WS_PROBE)) & 1) && !((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && ((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set++; }
-if (set >= 2 && ((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b3 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (!((b3 >> (10 + PIN_I2S_WS_PROBE)) & 1) && !((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set++; }
-if (set >= 2 && ((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b4 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (!((b4 >> (10 + PIN_I2S_WS_PROBE)) & 1) && !((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && ((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set++; }
-if (set >= 2 && ((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b5 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b0 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b1 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b2 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b3 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b4 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b5 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b6 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b6 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b7 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b6 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b7 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b8 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b7 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b8 >> (10 + PIN_I2S_DIN)) & 1); n++; }
@@ -166,9 +161,9 @@ if (((b12 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b11 >> (10 + PIN_I2S_BCK_PROBE
 if (((b13 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b12 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b13 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b14 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b13 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b14 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b15 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b14 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b15 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-/*
 if (((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b15 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b16 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b17 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+/*
 if (((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; }
@@ -184,8 +179,6 @@ if (((b29 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b28 >> (10 + PIN_I2S_BCK_PROBE
 if (((b30 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b29 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b30 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b31 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b30 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b31 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 */
-  // ''.join('if (((b%d >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b%d >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b%d >> (10 + PIN_I2S_DIN)) & 1); n++; }\n' % (i, i - 1, i) for i in range(32))
-  // ''.join('if ((b%d >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b%d >> (10 + PIN_I2S_DIN)) & 1); n++; }\n' % (i, i) for i in range(32))
 
   x <<= (16 - n);
   x &= 0xffff;
@@ -194,7 +187,7 @@ if (((b31 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b30 >> (10 + PIN_I2S_BCK_PROBE
   x = last_sample;
 }
 
-if (1 || x != 0x8000) {
+if (x != 0x8000) {
   debug[0] = b0;
   debug[1] = b1;
   debug[2] = b2;
@@ -358,7 +351,7 @@ int main()
   uint32_t offs = check_edges();
 
   uint32_t t = ULP_RISCV_GET_CCOUNT();
-  next_edge = t - t % 1252 + 1252 * 4000 + offs - 108;
+  next_edge = t - t % 1252 + 1252 * 4000 + offs - 52;
   asm volatile ("call 0x64\n");
 
   uint32_t block = 0;
