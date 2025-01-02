@@ -17,6 +17,9 @@ uint16_t audio_buf[2048];
 uint32_t cur_buf_ptr;
 
 uint32_t debug[32];
+uint32_t edges[64];
+uint32_t dur[64];
+uint32_t edge_count = 0;
 
 #pragma GCC push_options
 #pragma GCC optimize("O3")
@@ -375,6 +378,86 @@ if (x != 0x8000) {
 
   return x;
 }
+
+static void check_edges()
+{
+  // RISC-V CPU clock is 20 MHz
+  // WS toggles at 16 kHz = 1250 clocks per toggle
+
+  uint32_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11,
+           b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23,
+           b24, b25, b26, b27, b28, b29, b30, b31;
+
+  uint32_t addr;
+  __asm__ volatile (
+    "lui %[addr], 0xa\n"  // Address: 0xa424 (main CPU 0x60008424)
+    : [addr] "=r" (addr)
+  );
+
+  while (edge_count < 64) {
+    ulp_riscv_delay_cycles(edge_count * 100000 % 123457);
+
+    uint32_t cycles_start, cycles_end;
+    __asm__ volatile (
+      "rdcycle %[cycles_start]\n"
+      "lw %[b0], 0x424(%[addr])\n"
+      "lw %[b1], 0x424(%[addr])\n"
+      "lw %[b2], 0x424(%[addr])\n"
+      "lw %[b3], 0x424(%[addr])\n"
+      "lw %[b4], 0x424(%[addr])\n"
+      "lw %[b5], 0x424(%[addr])\n"
+      "lw %[b6], 0x424(%[addr])\n"
+      "lw %[b7], 0x424(%[addr])\n"
+      "lw %[b8], 0x424(%[addr])\n"
+      "lw %[b9], 0x424(%[addr])\n"
+      "lw %[b10], 0x424(%[addr])\n"
+      "lw %[b11], 0x424(%[addr])\n"
+      "lw %[b12], 0x424(%[addr])\n"
+      "lw %[b13], 0x424(%[addr])\n"
+      "lw %[b14], 0x424(%[addr])\n"
+      "lw %[b15], 0x424(%[addr])\n"
+      "rdcycle %[cycles_end]\n"
+      : [cycles_start] "=&r" (cycles_start)
+       ,[cycles_end] "=&r" (cycles_end)
+       ,[b0] "=&r" (b0)
+       ,[b1] "=&r" (b1)
+       ,[b2] "=&r" (b2)
+       ,[b3] "=&r" (b3)
+       ,[b4] "=&r" (b4)
+       ,[b5] "=&r" (b5)
+       ,[b6] "=&r" (b6)
+       ,[b7] "=&r" (b7)
+       ,[b8] "=&r" (b8)
+       ,[b9] "=&r" (b9)
+       ,[b10] "=&r" (b10)
+       ,[b11] "=&r" (b11)
+       ,[b12] "=&r" (b12)
+       ,[b13] "=&r" (b13)
+       ,[b14] "=&r" (b14)
+       ,[b15] "=&r" (b15)
+      : [addr] "r" (addr)
+    );
+
+  #define RECORD_EDGE(_n) { dur[edge_count] = cycles_end - cycles_start; edges[edge_count++] = cycles_start + 9 * (_n); continue; }
+    // '\n'.join('if (!((b%d >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b%d >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(%d)' % (i, i + 1, i) for i in range(26))
+    if (!((b0 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b1 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(0)
+    if (!((b1 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b2 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(1)
+    if (!((b2 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b3 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(2)
+    if (!((b3 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b4 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(3)
+    if (!((b4 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b5 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(4)
+    if (!((b5 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b6 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(5)
+    if (!((b6 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b7 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(6)
+    if (!((b7 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b8 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(7)
+    if (!((b8 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b9 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(8)
+    if (!((b9 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b10 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(9)
+    if (!((b10 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b11 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(10)
+    if (!((b11 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b12 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(11)
+    if (!((b12 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b13 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(12)
+    if (!((b13 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b14 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(13)
+    if (!((b14 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b15 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(14)
+    if (!((b15 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b16 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(15)
+  }
+}
 #pragma GCC pop_options
 
 int main()
@@ -385,6 +468,8 @@ int main()
   ulp_riscv_gpio_init(PIN_I2S_DIN);
   ulp_riscv_gpio_init(PIN_I2S_AUX_PROBE);
   uint32_t t = ULP_RISCV_GET_CCOUNT();
+
+  check_edges();
 
   // Wait for WS rising edge
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }

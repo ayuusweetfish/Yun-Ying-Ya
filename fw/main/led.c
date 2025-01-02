@@ -125,7 +125,7 @@ if (0) {
     .channel = LEDC_CHANNEL_4,
     .timer_sel = LEDC_TIMER_2,
     .gpio_num = PIN_I2S_WS,
-    .duty = 0b10000000000 - 8,
+    .duty = 0b10000000000,
     // .hpoint = 14, // diff = 30
   }));
   ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){

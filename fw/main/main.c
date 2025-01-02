@@ -181,6 +181,11 @@ if (0) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
+  while (ulp_edge_count < 64) vTaskDelay(pdMS_TO_TICKS(100));
+  printf("%"PRIu32 "\n", ulp_edge_count);
+  for (int i = 0; i < ulp_edge_count; i++)
+    printf("%8"PRIu32 " %8"PRIu32 " %8"PRIu32 "\n", (&ulp_edges)[i], (&ulp_edges)[i] % 1252, (&ulp_dur)[i]);
+
 if (0) {
   ulp_check_power = 0;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
