@@ -270,6 +270,7 @@ if (0) {
   post_handle_t *p = post_create();
 
   ulp_check_power = 1;
+  ulp_check_power = 0;
 
   vTaskDelay(pdMS_TO_TICKS(100));
   for (int i = 0; i < 21; i++)
