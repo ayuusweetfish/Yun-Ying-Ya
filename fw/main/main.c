@@ -274,23 +274,19 @@ if (0) {
 
   ulp_check_power = 1;
 
+  // aligned: 5 10 15 20 25 30
 /*
-  // debuga = 5 10 15 20 25
-  ESP_LOGI(TAG, "debuga = %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 "",
-    (&ulp_debuga)[0],
-    (&ulp_debuga)[1],
-    (&ulp_debuga)[2],
-    (&ulp_debuga)[3],
-    (&ulp_debuga)[4]);
+  ESP_LOGI(TAG, "debuga = %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 "",
+    (&ulp_debuga)[0], (&ulp_debuga)[1], (&ulp_debuga)[2], (&ulp_debuga)[3], (&ulp_debuga)[4], (&ulp_debuga)[5], (&ulp_debuga)[6], (&ulp_debuga)[7], (&ulp_debuga)[8], (&ulp_debuga)[9], (&ulp_debuga)[10]);
 */
+  for (int i = 0; i < 32; i++) printf("debuga %2u = %3u\n", (unsigned)i, (unsigned)((&ulp_debuga)[i]));
 
   while (1) {
     bool waken = xSemaphoreTake(sem_ulp, 0);
     uint16_t sample = ulp_c1; // ((const int16_t *)&ulp_audio_buf)[(ulp_cur_buf_ptr - 1 + 2048) % 2048];
     ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " sample=%04" PRIx16 " count=%04" PRIu32 " cycles=%4" PRIu32 " %c", ulp_c2, sample, ulp_c0, ulp_c3, waken ? '*' : ' ');
-    // printf("%u %u\n", (unsigned)ulp_c0, (unsigned)ulp_c1); // cycle_start, next_edge
     if (1) {
-      static const int N = 16;
+      static const int N = 10;
       uint32_t in[N];
       for (int i = 0; i < N; i++) in[i] = ((volatile uint32_t *)&ulp_debug)[i] >> 10;
       char s[N + 1]; s[N] = '\0';
