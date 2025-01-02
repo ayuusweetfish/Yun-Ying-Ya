@@ -198,7 +198,7 @@ for (int i = 0; i < 6; i++) {
   REG_SET_BIT(LEDC_LSCH4_CONF0_REG, LEDC_PARA_UP_LSCH4);
   REG_WRITE(LEDC_LSCH5_HPOINT_REG, (1024 + (40 - cnt_diff)));
   REG_SET_BIT(LEDC_LSCH5_CONF0_REG, LEDC_PARA_UP_LSCH5);
-  REG_WRITE(LEDC_LSCH6_HPOINT_REG, (2048 + (35 - cnt_diff)) % 2048);
+  REG_WRITE(LEDC_LSCH6_HPOINT_REG, (2048 + (-96 - cnt_diff)) % 2048);
   REG_SET_BIT(LEDC_LSCH6_CONF0_REG, LEDC_PARA_UP_LSCH6);
 
   portENABLE_INTERRUPTS();
@@ -260,6 +260,8 @@ if (0) {
 
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(PIN_I2S_BCK));
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(PIN_I2S_WS));
+  ESP_ERROR_CHECK(gpio_sleep_sel_dis(10));
+  ESP_ERROR_CHECK(gpio_sleep_sel_dis(11));
 
   ESP_LOGI(TAG, "Initialised LED with PWM controller");
 #endif

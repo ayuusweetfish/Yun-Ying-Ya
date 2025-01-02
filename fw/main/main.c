@@ -141,6 +141,10 @@ if (0) {
   rtc_gpio_set_direction_in_sleep(PIN_I2S_DIN, RTC_GPIO_MODE_INPUT_ONLY);
   rtc_gpio_pulldown_en(PIN_I2S_DIN);
 
+  rtc_gpio_init(PIN_I2S_AUX_PROBE);
+  rtc_gpio_set_direction(PIN_I2S_AUX_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
+  rtc_gpio_set_direction_in_sleep(PIN_I2S_AUX_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
+
 if (0) {
   gpio_config(&(gpio_config_t){
     .pin_bit_mask = (1 << PIN_I2S_BCK_PROBE) | (1 << PIN_I2S_WS_PROBE) | (1 << PIN_I2S_DIN),
@@ -280,6 +284,8 @@ if (0) {
       ESP_LOGI(TAG, " WS: %s", s);
       for (int i = 0; i < N; i++) s[i] = '0' + ((in[i] >> PIN_I2S_DIN) & 1);
       ESP_LOGI(TAG, "DIN: %s", s);
+      for (int i = 0; i < N; i++) s[i] = '0' + ((in[i] >> PIN_I2S_AUX_PROBE) & 1);
+      ESP_LOGI(TAG, "AUX: %s", s);
       ESP_LOGI(TAG, "");
     }
     led_set_state(waken ? LED_STATE_SPEECH : LED_STATE_IDLE, 50);
