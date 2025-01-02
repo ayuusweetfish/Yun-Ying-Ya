@@ -55,7 +55,10 @@ void audio_init()
   // Enable I2S first, before any read may happen in the task
   ESP_ERROR_CHECK(i2s_enable());
 
-  xTaskCreate(audio_task, "audio_task", 16384, NULL, 5, &audio_task_handle);
+  BaseType_t result = xTaskCreate(audio_task, "audio_task", 16384, NULL, 5, &audio_task_handle);
+  printf("audio_task_handle = %p\n", audio_task_handle);
+  if (result == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY)
+    printf("! errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY\n");
 }
 
 static int below_sleep_threshold_count = 0;

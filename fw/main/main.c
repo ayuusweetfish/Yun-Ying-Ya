@@ -141,10 +141,6 @@ if (0) {
   rtc_gpio_set_direction_in_sleep(PIN_I2S_DIN, RTC_GPIO_MODE_INPUT_ONLY);
   rtc_gpio_pulldown_en(PIN_I2S_DIN);
 
-  rtc_gpio_init(PIN_I2S_AUX_PROBE);
-  rtc_gpio_set_direction(PIN_I2S_AUX_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
-  rtc_gpio_set_direction_in_sleep(PIN_I2S_AUX_PROBE, RTC_GPIO_MODE_INPUT_ONLY);
-
 if (0) {
   gpio_config(&(gpio_config_t){
     .pin_bit_mask = (1 << PIN_I2S_BCK_PROBE) | (1 << PIN_I2S_WS_PROBE) | (1 << PIN_I2S_DIN),
@@ -181,26 +177,27 @@ if (0) {
   ESP_ERROR_CHECK(ulp_riscv_load_binary(bin_start, bin_end - bin_start));
   ESP_ERROR_CHECK(ulp_riscv_run());
 
-  while (ulp_edge_count < 64) vTaskDelay(pdMS_TO_TICKS(100));
-  printf("%"PRIu32 "\n", ulp_edge_count);
-  for (int i = 0; i < ulp_edge_count; i++)
-    printf("%8"PRIu32 " %8"PRIu32 " %8"PRIu32 "\n", (&ulp_edges)[i], (&ulp_edges)[i] % 1252, (&ulp_dur)[i]);
+  vTaskDelay(pdMS_TO_TICKS(100));
+
+  ulp_check_power = 1;
 
 if (0) {
-  ulp_check_power = 0;
+  // ulp_check_power = 0;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   printf("Starting!\n");
   uint32_t last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
   i2s_enable();
+
+  int32_t *b = heap_caps_malloc(32000 * sizeof(int32_t), MALLOC_CAP_SPIRAM);
+  size_t ptr_b = 0;
+
+  int16_t *a = heap_caps_malloc(16000 * sizeof(int16_t), MALLOC_CAP_SPIRAM);
+  uint32_t ptr = 0;
+
   while (1) {
     vTaskDelay(pdMS_TO_TICKS(20));
     uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
 
-    static int32_t b[32000] = { 0 };
-    static size_t ptr_b = 0;
-
-    static uint16_t a[32000];
-    static uint32_t ptr = 0;
     for (uint32_t i = last_push; i != cur_push; i = (i + 64) % 2048) {
       if (ptr_b < 32000) i2s_read(b, &ptr_b, ptr_b + 64 < 32000 ? ptr_b + 64 : 32000);
       for (uint32_t j = 0; j < 64; j++)
@@ -274,12 +271,9 @@ if (0) {
 
   ulp_check_power = 1;
 
-  // aligned: 5 10 15 20 25 30
-/*
-  ESP_LOGI(TAG, "debuga = %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 "",
-    (&ulp_debuga)[0], (&ulp_debuga)[1], (&ulp_debuga)[2], (&ulp_debuga)[3], (&ulp_debuga)[4], (&ulp_debuga)[5], (&ulp_debuga)[6], (&ulp_debuga)[7], (&ulp_debuga)[8], (&ulp_debuga)[9], (&ulp_debuga)[10]);
-*/
-  for (int i = 0; i < 32; i++) printf("debuga %2u = %3u\n", (unsigned)i, (unsigned)((&ulp_debuga)[i]));
+  vTaskDelay(pdMS_TO_TICKS(100));
+  for (int i = 0; i < 21; i++)
+    printf("debuga %2u %3u\n", (unsigned)i, (unsigned)((&ulp_debuga)[i]));
 
   while (1) {
     bool waken = xSemaphoreTake(sem_ulp, 0);
@@ -296,8 +290,6 @@ if (0) {
       ESP_LOGI(TAG, " WS: %s", s);
       for (int i = 0; i < N; i++) s[i] = '0' + ((in[i] >> PIN_I2S_DIN) & 1);
       ESP_LOGI(TAG, "DIN: %s", s);
-      for (int i = 0; i < N; i++) s[i] = '0' + ((in[i] >> PIN_I2S_AUX_PROBE) & 1);
-      ESP_LOGI(TAG, "AUX: %s", s);
       ESP_LOGI(TAG, "");
     }
     led_set_state(waken ? LED_STATE_SPEECH : LED_STATE_IDLE, 50);
