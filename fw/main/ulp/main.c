@@ -16,7 +16,8 @@ uint32_t c0 = 0, c1 = 0, c2 = 0, c3 = 0;
 uint16_t audio_buf[2048];
 uint32_t cur_buf_ptr;
 
-uint32_t debug[32];
+uint32_t debug[10];
+// uint32_t debuga[32];
 
 #define N_EDGES 64
 uint32_t edges[N_EDGES];
@@ -24,11 +25,13 @@ uint32_t dur[N_EDGES];
 uint32_t edge_count = 0;
 
 uint32_t next_edge = 0;
+uint32_t last_sample = 0;
 
 #pragma GCC push_options
 #pragma GCC optimize("O3")
 static inline uint32_t read()
 {
+  return;
   uint32_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11,
            b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23,
            b24, b25, b26, b27, b28, b29, b30, b31;
@@ -223,15 +226,17 @@ static inline uint32_t read_less()
   );
 */
 
+  uint32_t cycles_start, cycles_end;
   uint32_t scratch;
   __asm__ volatile (
-    ".option norvc\n"
     ".p2align 2\n"
+    ".option norvc\n"
     "1:"
-    "rdcycle %[scratch]\n"
-    "sub %[scratch], %[scratch], %[next_edge]\n"
+    "rdcycle %[cycles_start]\n"
+    "sub %[scratch], %[cycles_start], %[next_edge]\n"
     "blt %[scratch], zero, 1b\n"
-    : [scratch] "=&r" (scratch)
+    : [scratch] "=&r" (scratch),
+      [cycles_start] "=&r" (cycles_start)
     : [next_edge] "r" (next_edge)
   );
 
@@ -265,6 +270,7 @@ static inline uint32_t read_less()
     "lw %[b24], 0x424(%[addr])\n"
     "lw %[b25], 0x424(%[addr])\n"
   */
+    "rdcycle %[cycles_end]\n"
     ".option rvc\n"
 // ''.join('"lw %%[b%d], 0x424(%%[addr])\\n"\n' % i for i in range(32))
     : [b0] "=&r" (b0)
@@ -295,11 +301,16 @@ static inline uint32_t read_less()
      ,[b24] "=&r" (b24)
      ,[b25] "=&r" (b25)
     */
+     ,[cycles_end] "=&r" (cycles_end)
     : [addr] "r" (addr)
 // ''.join(' ,[b%d] "=&r" (b%d)\n' % (i, i) for i in range(32))
   );
 
   uint32_t x = 0;
+
+if (cycles_end - cycles_start < 19 + 9 * 16 /* number of bits read */) {
+  // This will give very rare glitches due to bus contention (0~5 per second),
+  // but it should be very acceptable
   uint32_t n = 0;
 uint32_t set = 0;
 if (!((b0 >> (10 + PIN_I2S_WS_PROBE)) & 1) && !((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set++; }
@@ -345,6 +356,10 @@ if (((b31 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b30 >> (10 + PIN_I2S_BCK_PROBE
 
   x <<= (16 - n);
   x &= 0xffff;
+  last_sample = x;
+} else {
+  x = last_sample;
+}
 
 if (x != 0x8000) {
   debug[0] = b0;
@@ -376,10 +391,11 @@ if (x != 0x8000) {
   debug[25] = b25;
 */
   // ''.join('debug[%d] = b%d;\n' % (i, i) for i in range(26))
-  // c0 = scratch;
+  // c0 = cycle_start;
   // c1 = next_edge;
   c1 = x;
   c0++;
+  c3 = cycles_end - cycles_start;
 }
 
   // c1 = ULP_RISCV_GET_CCOUNT() - t;
@@ -408,8 +424,8 @@ static uint32_t check_edges()
 
     uint32_t cycles_start, cycles_end;
     __asm__ volatile (
-      ".option norvc\n"
       ".p2align 2\n"
+      ".option norvc\n"
       "rdcycle %[cycles_start]\n"
       "lw %[b0], 0x424(%[addr])\n"
       "lw %[b1], 0x424(%[addr])\n"
@@ -486,10 +502,73 @@ int main()
   ulp_riscv_gpio_init(PIN_I2S_DIN);
   ulp_riscv_gpio_init(PIN_I2S_AUX_PROBE);
 
+/*
+  uint32_t cyc0, cyc1;
+  asm volatile (
+    ".p2align 2\n"
+    ".option norvc\n"
+    "rdcycle %[cyc0]\n"
+    "rdcycle %[cyc1]\n"
+    ".option rvc\n"
+    : [cyc0] "=&r" (cyc0), [cyc1] "=&r" (cyc1)
+  );
+  debuga[0] = cyc1 - cyc0;
+
+  asm volatile (
+    ".p2align 2\n"
+    ".option norvc\n"
+    "rdcycle %[cyc0]\n"
+    "nop\n"
+    "rdcycle %[cyc1]\n"
+    ".option rvc\n"
+    : [cyc0] "=&r" (cyc0), [cyc1] "=&r" (cyc1)
+  );
+  debuga[1] = cyc1 - cyc0;
+
+  asm volatile (
+    ".p2align 2\n"
+    ".option norvc\n"
+    "rdcycle %[cyc0]\n"
+    "nop\n"
+    "nop\n"
+    "rdcycle %[cyc1]\n"
+    ".option rvc\n"
+    : [cyc0] "=&r" (cyc0), [cyc1] "=&r" (cyc1)
+  );
+  debuga[2] = cyc1 - cyc0;
+
+  asm volatile (
+    ".p2align 2\n"
+    ".option norvc\n"
+    "rdcycle %[cyc0]\n"
+    "nop\n"
+    "nop\n"
+    "nop\n"
+    "rdcycle %[cyc1]\n"
+    ".option rvc\n"
+    : [cyc0] "=&r" (cyc0), [cyc1] "=&r" (cyc1)
+  );
+  debuga[3] = cyc1 - cyc0;
+
+  asm volatile (
+    ".p2align 2\n"
+    ".option norvc\n"
+    "rdcycle %[cyc0]\n"
+    "nop\n"
+    "nop\n"
+    "nop\n"
+    "nop\n"
+    "rdcycle %[cyc1]\n"
+    ".option rvc\n"
+    : [cyc0] "=&r" (cyc0), [cyc1] "=&r" (cyc1)
+  );
+  debuga[4] = cyc1 - cyc0;
+*/
+
   uint32_t offs = check_edges();
 
   uint32_t t = ULP_RISCV_GET_CCOUNT();
-  next_edge = t - t % 1252 + 1252 * 4000 + offs - 9;
+  next_edge = t - t % 1252 + 1252 * 4000 + offs - 18;
 
 /*
   // Wait for WS rising edge
