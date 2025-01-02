@@ -17,6 +17,6 @@ idf_component_register(
 )
 
 set(ulp_app_name ulp_duck)
-set(ulp_sources "ulp/main.c")
+set(ulp_sources "ulp/main.c" "ulp/sled.S")
 set(ulp_exp_dep_srcs "main.c")
 ulp_embed_binary(${ulp_app_name} "${ulp_sources}" "${ulp_exp_dep_srcs}")

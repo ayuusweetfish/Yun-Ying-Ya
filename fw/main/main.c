@@ -117,7 +117,7 @@ if (0) {
   // I2S input
   i2s_init();
 
-if (1) {
+if (0) {
   // Audio processing
   audio_init();
 
@@ -181,7 +181,7 @@ if (0) {
 
   ulp_check_power = 1;
 
-if (1) {
+if (0) {
   // ulp_check_power = 0;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   printf("Starting!\n");
@@ -271,15 +271,9 @@ if (1) {
 
   ulp_check_power = 1;
 
-/*
-  // debuga = 5 10 15 20 25
-  ESP_LOGI(TAG, "debuga = %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 "",
-    (&ulp_debuga)[0],
-    (&ulp_debuga)[1],
-    (&ulp_debuga)[2],
-    (&ulp_debuga)[3],
-    (&ulp_debuga)[4]);
-*/
+  vTaskDelay(pdMS_TO_TICKS(100));
+  for (int i = 0; i < 40; i++)
+    printf("debuga %2u %3u\n", (unsigned)i, (unsigned)((&ulp_debuga)[i]));
 
   while (1) {
     bool waken = xSemaphoreTake(sem_ulp, 0);

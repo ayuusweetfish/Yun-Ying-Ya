@@ -13,16 +13,19 @@ volatile uint32_t check_power = 0;
 
 uint32_t c0 = 0, c1 = 0, c2 = 0, c3 = 0;
 
-uint16_t audio_buf[2048];
+#define AUDIO_BUF_SIZE 2048
+uint16_t audio_buf[AUDIO_BUF_SIZE];
 uint32_t cur_buf_ptr;
 
 uint32_t debug[10];
-// uint32_t debuga[32];
+uint32_t debuga[40];
 
 #define N_EDGES 64
 
 uint32_t next_edge = 0;
 uint32_t last_sample = 0;
+
+extern uint32_t sled[40];
 
 #pragma GCC push_options
 #pragma GCC optimize("O3")
@@ -42,22 +45,6 @@ static inline uint32_t read_less()
     "lui %[addr], 0xa\n"  // Address: 0xa424 (main CPU 0x60008424)
     : [addr] "=r" (addr)
   );
-
-/*
-  // Wait for WS falling edge
-
-  uint32_t scratch;
-  __asm__ volatile (
-    "1:"
-    "lw %[b0], 0x424(%[addr])\n"
-    "sll %[scratch], %[b0], %[shift_amt]\n"
-    "bltz %[scratch], 1b\n"
-    : [b0] "=&r" (b0)
-     ,[scratch] "=&r" (scratch)
-    : [addr] "r" (addr),
-      [shift_amt] "i" (31 - (10 + PIN_I2S_AUX_PROBE))
-  );
-*/
 
   uint32_t cycles_start, cycles_end;
   uint32_t scratch;
@@ -337,7 +324,25 @@ int main()
   ulp_riscv_gpio_init(PIN_I2S_BCK_PROBE);
   ulp_riscv_gpio_init(PIN_I2S_WS_PROBE);
   ulp_riscv_gpio_init(PIN_I2S_DIN);
-  ulp_riscv_gpio_init(PIN_I2S_AUX_PROBE);
+
+  debuga[39] = 100;
+  for (int i = 0; i < 32; i++) {
+    uint32_t cyc0, cyc1;
+    asm volatile (
+      ".p2align 2\n"
+      ".option norvc\n"
+      "mv a0, zero\n"
+      "rdcycle %[cyc0]\n"
+      "jalr ra, 0(%[dest])\n"
+      "rdcycle %[cyc1]\n"
+      ".option rvc\n"
+      : [cyc0] "=&r" (cyc0), [cyc1] "=&r" (cyc1)
+      : [dest] "r" (sled[i])
+      : "a0", "a1"
+    );
+    debuga[i] = cyc1 - cyc0;
+  }
+  debuga[38] = 100;
 
   uint32_t offs = check_edges();
 
@@ -360,7 +365,7 @@ int main()
         power += (uint32_t)(s_diff * s_diff) / 64;
         last_s16 = s16;
       }
-      cur_buf_ptr = block = (block + 64) % 2048;
+      cur_buf_ptr = block = (block + 64) % AUDIO_BUF_SIZE;
       c2 = power;
       if (power >= 20000) {
         if (++successive >= 4) {
@@ -378,7 +383,7 @@ int main()
         uint32_t sample = read();
         audio_buf[block + i] = sample;
       }
-      cur_buf_ptr = block = (block + 64) % 2048;
+      cur_buf_ptr = block = (block + 64) % AUDIO_BUF_SIZE;
     }
   }
 }

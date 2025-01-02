@@ -1,6 +1,6 @@
 #pragma once
 
-#define BOARD_REV 2
+#define BOARD_REV 1
 
 #if BOARD_REV == 1
   #define PIN_R 17
