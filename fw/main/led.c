@@ -136,6 +136,7 @@ if (0) {
     .duty = 32,
     // .hpoint = 1024 + 57,
   }));
+/*
   ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
     .channel = LEDC_CHANNEL_6,
@@ -143,6 +144,7 @@ if (0) {
     .gpio_num = 11,
     .duty = 0b10000000000,
   }));
+*/
 
 void reset_timers()
 {
@@ -261,7 +263,7 @@ if (0) {
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(PIN_I2S_BCK));
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(PIN_I2S_WS));
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(10));
-  ESP_ERROR_CHECK(gpio_sleep_sel_dis(11));
+  // ESP_ERROR_CHECK(gpio_sleep_sel_dis(11));
 
   ESP_LOGI(TAG, "Initialised LED with PWM controller");
 #endif
