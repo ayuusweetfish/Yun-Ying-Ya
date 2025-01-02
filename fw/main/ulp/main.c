@@ -17,9 +17,13 @@ uint16_t audio_buf[2048];
 uint32_t cur_buf_ptr;
 
 uint32_t debug[32];
-uint32_t edges[64];
-uint32_t dur[64];
+
+#define N_EDGES 64
+uint32_t edges[N_EDGES];
+uint32_t dur[N_EDGES];
 uint32_t edge_count = 0;
+
+uint32_t next_edge = 0;
 
 #pragma GCC push_options
 #pragma GCC optimize("O3")
@@ -203,6 +207,7 @@ static inline uint32_t read_less()
     : [addr] "=r" (addr)
   );
 
+/*
   // Wait for WS falling edge
 
   uint32_t scratch;
@@ -216,8 +221,23 @@ static inline uint32_t read_less()
     : [addr] "r" (addr),
       [shift_amt] "i" (31 - (10 + PIN_I2S_AUX_PROBE))
   );
+*/
+
+  uint32_t scratch;
+  __asm__ volatile (
+    ".p2align 2\n"
+    "1:"
+    "rdcycle %[scratch]\n"
+    ".p2align 2\n"
+    "sub %[scratch], %[scratch], %[next_edge]\n"
+    ".p2align 2\n"
+    "blt %[scratch], zero, 1b\n"
+    : [scratch] "=&r" (scratch)
+    : [next_edge] "r" (next_edge)
+  );
 
   __asm__ volatile (
+    ".p2align 2\n"
     "lw %[b0], 0x424(%[addr])\n"
     "lw %[b1], 0x424(%[addr])\n"
     "lw %[b2], 0x424(%[addr])\n"
@@ -281,33 +301,15 @@ static inline uint32_t read_less()
 
   uint32_t x = 0;
   uint32_t n = 0;
-// if (((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b0 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-bool b0_ws = ((b0 >> (10 + PIN_I2S_WS_PROBE)) & 1);
-bool b1_ws = ((b1 >> (10 + PIN_I2S_WS_PROBE)) & 1);
-bool b2_ws = ((b2 >> (10 + PIN_I2S_WS_PROBE)) & 1);
-bool b3_ws = ((b3 >> (10 + PIN_I2S_WS_PROBE)) & 1);
-bool b4_ws = ((b4 >> (10 + PIN_I2S_WS_PROBE)) & 1);
-bool b5_ws = ((b5 >> (10 + PIN_I2S_WS_PROBE)) & 1);
-bool b6_ws = ((b5 >> (10 + PIN_I2S_WS_PROBE)) & 1);
-bool b0_bck = ((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1);
-bool b1_bck = ((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1);
-bool b2_bck = ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1);
-bool b3_bck = ((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1);
-bool b4_bck = ((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1);
-bool b5_bck = ((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1);
-bool b6_bck = ((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1);
-uint32_t k = 0;
-if (!b0_ws && !b0_bck) { k++; }
-if (!b1_ws && !b1_bck && b0_bck) { k++; }
-if (k >= 2 && ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b2 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (!b3_ws && !b2_bck && b1_bck) { k++; }
-if (k >= 2 && ((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b3 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (!b4_ws && !b3_bck && b2_bck) { k++; }
-if (k >= 2 && ((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b4 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (!b5_ws && !b4_bck && b3_bck) { k++; }
-if (k >= 2 && ((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b5 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (!b6_ws && !b5_bck && b4_bck) { k++; }
-if (k >= 2 && ((b6 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b6 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+bool set = false;
+if (!((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set = true; }
+if (set && ((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b1 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (!((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && ((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set = true; }
+if (set && ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b2 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b3 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b4 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b5 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (((b6 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b6 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b7 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b6 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b7 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b8 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b7 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b8 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b9 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b8 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b9 >> (10 + PIN_I2S_DIN)) & 1); n++; }
@@ -348,11 +350,11 @@ if (x != 0x8000) {
   debug[3] = b3;
   debug[4] = b4;
   debug[5] = b5;
-/*
   debug[6] = b6;
   debug[7] = b7;
   debug[8] = b8;
   debug[9] = b9;
+/*
   debug[10] = b10;
   debug[11] = b11;
   debug[12] = b12;
@@ -371,15 +373,19 @@ if (x != 0x8000) {
   debug[25] = b25;
 */
   // ''.join('debug[%d] = b%d;\n' % (i, i) for i in range(26))
+  // c0 = scratch;
+  // c1 = next_edge;
   c1 = x;
+  c0++;
 }
 
   // c1 = ULP_RISCV_GET_CCOUNT() - t;
+  next_edge += 1252;
 
   return x;
 }
 
-static void check_edges()
+static uint32_t check_edges()
 {
   // RISC-V CPU clock is 20 MHz
   // WS toggles at 16 kHz = 1250 clocks per toggle
@@ -394,11 +400,12 @@ static void check_edges()
     : [addr] "=r" (addr)
   );
 
-  while (edge_count < 64) {
+  while (edge_count < N_EDGES) {
     ulp_riscv_delay_cycles(edge_count * 100000 % 123457);
 
     uint32_t cycles_start, cycles_end;
     __asm__ volatile (
+      ".p2align 2\n"
       "rdcycle %[cycles_start]\n"
       "lw %[b0], 0x424(%[addr])\n"
       "lw %[b1], 0x424(%[addr])\n"
@@ -439,24 +446,30 @@ static void check_edges()
     );
 
   #define RECORD_EDGE(_n) { dur[edge_count] = cycles_end - cycles_start; edges[edge_count++] = cycles_start + 9 * (_n); continue; }
-    // '\n'.join('if (!((b%d >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b%d >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(%d)' % (i, i + 1, i) for i in range(26))
-    if (!((b0 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b1 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(0)
-    if (!((b1 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b2 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(1)
-    if (!((b2 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b3 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(2)
-    if (!((b3 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b4 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(3)
-    if (!((b4 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b5 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(4)
-    if (!((b5 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b6 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(5)
-    if (!((b6 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b7 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(6)
-    if (!((b7 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b8 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(7)
-    if (!((b8 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b9 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(8)
-    if (!((b9 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b10 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(9)
-    if (!((b10 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b11 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(10)
-    if (!((b11 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b12 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(11)
-    if (!((b12 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b13 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(12)
-    if (!((b13 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b14 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(13)
-    if (!((b14 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b15 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(14)
-    if (!((b15 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b16 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(15)
+    // '\n'.join('if (!((b%d >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b%d >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(%d)' % (i + 1, i, i + 1) for i in range(25))
+    if (!((b1 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b0 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(1)
+    if (!((b2 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b1 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(2)
+    if (!((b3 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b2 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(3)
+    if (!((b4 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b3 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(4)
+    if (!((b5 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b4 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(5)
+    if (!((b6 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b5 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(6)
+    if (!((b7 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b6 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(7)
+    if (!((b8 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b7 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(8)
+    if (!((b9 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b8 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(9)
+    if (!((b10 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b9 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(10)
+    if (!((b11 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b10 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(11)
+    if (!((b12 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b11 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(12)
+    if (!((b13 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b12 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(13)
+    if (!((b14 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b13 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(14)
+    if (!((b15 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b14 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(15)
   }
+
+  uint32_t t = edges[0] % 1252;
+  for (int i = 1; i < N_EDGES; i++) {
+    uint32_t ti = edges[i] % 1252;
+    if (t > ti) t = ti; // TODO: Handle wraprounds
+  }
+  return t;
 }
 #pragma GCC pop_options
 
@@ -467,13 +480,17 @@ int main()
   ulp_riscv_gpio_init(PIN_I2S_WS_PROBE);
   ulp_riscv_gpio_init(PIN_I2S_DIN);
   ulp_riscv_gpio_init(PIN_I2S_AUX_PROBE);
+
+  uint32_t offs = check_edges();
+
   uint32_t t = ULP_RISCV_GET_CCOUNT();
+  next_edge = t - t % 1252 + 1252 * 4000 + offs;
 
-  check_edges();
-
+/*
   // Wait for WS rising edge
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) != 0) { }
   while ((REG_READ(RTC_GPIO_IN_REG) & (1 << (10 + PIN_I2S_WS_PROBE))) == 0) { }
+*/
   uint32_t block = 0;
   int successive = 0;
   while (1) {

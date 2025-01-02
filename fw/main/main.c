@@ -277,7 +277,8 @@ if (0) {
   while (1) {
     bool waken = xSemaphoreTake(sem_ulp, 0);
     uint16_t sample = ulp_c1; // ((const int16_t *)&ulp_audio_buf)[(ulp_cur_buf_ptr - 1 + 2048) % 2048];
-    ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " sample=%04" PRIx16 " %c", ulp_c2, sample, waken ? '*' : ' ');
+    ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " sample=%04" PRIx16 " count=%04" PRIu32 " %c", ulp_c2, sample, ulp_c0, waken ? '*' : ' ');
+    printf("%u %u\n", (unsigned)ulp_c0, (unsigned)ulp_c1);
     if (1) {
       static const int N = 32;
       uint32_t in[N];
