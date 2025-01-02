@@ -225,12 +225,11 @@ static inline uint32_t read_less()
 
   uint32_t scratch;
   __asm__ volatile (
+    ".option norvc\n"
     ".p2align 2\n"
     "1:"
     "rdcycle %[scratch]\n"
-    ".p2align 2\n"
     "sub %[scratch], %[scratch], %[next_edge]\n"
-    ".p2align 2\n"
     "blt %[scratch], zero, 1b\n"
     : [scratch] "=&r" (scratch)
     : [next_edge] "r" (next_edge)
@@ -266,6 +265,7 @@ static inline uint32_t read_less()
     "lw %[b24], 0x424(%[addr])\n"
     "lw %[b25], 0x424(%[addr])\n"
   */
+    ".option rvc\n"
 // ''.join('"lw %%[b%d], 0x424(%%[addr])\\n"\n' % i for i in range(32))
     : [b0] "=&r" (b0)
      ,[b1] "=&r" (b1)
@@ -301,14 +301,17 @@ static inline uint32_t read_less()
 
   uint32_t x = 0;
   uint32_t n = 0;
-bool set = false;
-if (!((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set = true; }
-if (set && ((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b1 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (!((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && ((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set = true; }
-if (set && ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b2 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b3 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b4 >> (10 + PIN_I2S_DIN)) & 1); n++; }
-if (((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b5 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+uint32_t set = 0;
+if (!((b0 >> (10 + PIN_I2S_WS_PROBE)) & 1) && !((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set++; }
+if (set >= 2 && ((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b1 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (!((b1 >> (10 + PIN_I2S_WS_PROBE)) & 1) && !((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && ((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set++; }
+if (set >= 2 && ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b2 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (!((b2 >> (10 + PIN_I2S_WS_PROBE)) & 1) && !((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && ((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set++; }
+if (set >= 2 && ((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b3 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (!((b3 >> (10 + PIN_I2S_WS_PROBE)) & 1) && !((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set++; }
+if (set >= 2 && ((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b4 >> (10 + PIN_I2S_DIN)) & 1); n++; }
+if (!((b4 >> (10 + PIN_I2S_WS_PROBE)) & 1) && !((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && ((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { set++; }
+if (set >= 2 && ((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b5 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b6 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b6 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b7 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b6 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b7 >> (10 + PIN_I2S_DIN)) & 1); n++; }
 if (((b8 >> (10 + PIN_I2S_BCK_PROBE)) & 1) && !((b7 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b8 >> (10 + PIN_I2S_DIN)) & 1); n++; }
@@ -405,6 +408,7 @@ static uint32_t check_edges()
 
     uint32_t cycles_start, cycles_end;
     __asm__ volatile (
+      ".option norvc\n"
       ".p2align 2\n"
       "rdcycle %[cycles_start]\n"
       "lw %[b0], 0x424(%[addr])\n"
@@ -424,6 +428,7 @@ static uint32_t check_edges()
       "lw %[b14], 0x424(%[addr])\n"
       "lw %[b15], 0x424(%[addr])\n"
       "rdcycle %[cycles_end]\n"
+      ".option rvc\n"
       : [cycles_start] "=&r" (cycles_start)
        ,[cycles_end] "=&r" (cycles_end)
        ,[b0] "=&r" (b0)
@@ -484,7 +489,7 @@ int main()
   uint32_t offs = check_edges();
 
   uint32_t t = ULP_RISCV_GET_CCOUNT();
-  next_edge = t - t % 1252 + 1252 * 4000 + offs;
+  next_edge = t - t % 1252 + 1252 * 4000 + offs - 9;
 
 /*
   // Wait for WS rising edge
