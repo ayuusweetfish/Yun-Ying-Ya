@@ -272,7 +272,7 @@ if (0) {
   ulp_check_power = 1;
 
   vTaskDelay(pdMS_TO_TICKS(100));
-  for (int i = 0; i < 40; i++)
+  for (int i = 0; i < 21; i++)
     printf("debuga %2u %3u\n", (unsigned)i, (unsigned)((&ulp_debuga)[i]));
 
   while (1) {

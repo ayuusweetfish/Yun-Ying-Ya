@@ -18,14 +18,14 @@ uint16_t audio_buf[AUDIO_BUF_SIZE];
 uint32_t cur_buf_ptr;
 
 uint32_t debug[10];
-uint32_t debuga[40];
+uint32_t debuga[32];
 
 #define N_EDGES 64
 
 uint32_t next_edge = 0;
 uint32_t last_sample = 0;
 
-extern uint32_t sled[40];
+extern uint32_t sled[32];
 
 #pragma GCC push_options
 #pragma GCC optimize("O3")
@@ -48,16 +48,29 @@ static inline uint32_t read_less()
 
   uint32_t cycles_start, cycles_end;
   uint32_t scratch;
-  __asm__ volatile (
+  asm (
     ".p2align 2\n"
     ".option norvc\n"
+    // Obtain current cycles until >= next_edge
     "1:"
     "rdcycle %[cycles_start]\n"
     "sub %[scratch], %[cycles_start], %[next_edge]\n"
-    "blt %[scratch], zero, 1b\n"
+    "bltz %[scratch], 1b\n"
+
+    // Cycle-accurate delay compensation subroutine
+    // destination = *(sled + 4 * scratch)
+    "andi %[scratch], %[scratch], 31\n" // Mask spurious large values during startup
+    "slli %[scratch], %[scratch], 2\n"
+    "lw %[scratch], %[sled_base](%[scratch])\n"
+    "li a0, 0\n"
+    "jalr ra, 0(%[scratch])\n"
+    // "call 0x64\n"
+
     : [scratch] "=&r" (scratch),
       [cycles_start] "=&r" (cycles_start)
-    : [next_edge] "r" (next_edge)
+    : [next_edge] "r" (next_edge),
+      [sled_base] "i" (0x68 /* sled */)
+    : "a0", "ra"
   );
 
   __asm__ volatile (
@@ -128,7 +141,7 @@ static inline uint32_t read_less()
 
   uint32_t x = 0;
 
-if (cycles_end - cycles_start < 19 + 9 * 16 /* number of bits read */) {
+if (1 || cycles_end - cycles_start < 87 + 9 * 16 /* number of bits read */) {
   // This will give very rare glitches due to bus contention (0~5 per second),
   // but it should be very acceptable
   uint32_t n = 0;
@@ -325,8 +338,7 @@ int main()
   ulp_riscv_gpio_init(PIN_I2S_WS_PROBE);
   ulp_riscv_gpio_init(PIN_I2S_DIN);
 
-  debuga[39] = 100;
-  for (int i = 0; i < 32; i++) {
+  for (int i = 0; i < 21; i++) {
     uint32_t cyc0, cyc1;
     asm volatile (
       ".p2align 2\n"
@@ -338,16 +350,16 @@ int main()
       ".option rvc\n"
       : [cyc0] "=&r" (cyc0), [cyc1] "=&r" (cyc1)
       : [dest] "r" (sled[i])
-      : "a0", "a1"
+      : "a0", "ra"
     );
     debuga[i] = cyc1 - cyc0;
   }
-  debuga[38] = 100;
 
   uint32_t offs = check_edges();
 
   uint32_t t = ULP_RISCV_GET_CCOUNT();
-  next_edge = t - t % 1252 + 1252 * 4000 + offs - 18;
+  next_edge = t - t % 1252 + 1252 * 4000 + offs - 108;
+  asm volatile ("call 0x64\n");
 
   uint32_t block = 0;
   int successive = 0;
@@ -366,7 +378,7 @@ int main()
         last_s16 = s16;
       }
       cur_buf_ptr = block = (block + 64) % AUDIO_BUF_SIZE;
-      c2 = power;
+      // c2 = power;
       if (power >= 20000) {
         if (++successive >= 4) {
           successive = 4;
