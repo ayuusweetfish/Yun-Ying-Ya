@@ -117,7 +117,7 @@ if (0) {
   // I2S input
   i2s_init();
 
-if (0) {
+if (1) {
   // Audio processing
   audio_init();
 
@@ -181,7 +181,7 @@ if (0) {
 
   ulp_check_power = 1;
 
-if (1) {
+if (0) {
   ulp_check_power = 0;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   printf("Starting!\n");
@@ -270,7 +270,7 @@ if (1) {
   post_handle_t *p = post_create();
 
   ulp_check_power = 1;
-  ulp_check_power = 0;
+  // ulp_check_power = 0;
 
   vTaskDelay(pdMS_TO_TICKS(100));
   for (int i = 0; i < 21; i++)
@@ -281,7 +281,7 @@ if (1) {
     uint16_t sample = ulp_c1;
     sample = ((const int16_t *)&ulp_audio_buf)[(ulp_cur_buf_ptr - 1 + 2048) % 2048];
     ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " sample=%04" PRIx16 " count=%04" PRIu32 " cycles=%4" PRIu32 " %c", ulp_c2, sample, ulp_c0, ulp_c3, waken ? '*' : ' ');
-    if (1) {
+    if (0) {
       static const int N = 10;
       uint32_t in[N];
       for (int i = 0; i < N; i++) in[i] = ((volatile uint32_t *)&ulp_debug)[i] >> 10;
