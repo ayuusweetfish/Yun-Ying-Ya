@@ -227,11 +227,17 @@ void audio_task(void *_unused)
 
 void audio_push(const int16_t *buf, size_t size)
 {
-if (1) {
+if (0) {
+  static uint32_t n = 0;
+  n += size;
+  if (n >= 16000) { ESP_LOGI(TAG, "second!"); n -= 16000; }
+}
+if (0) {
   static int16_t dump_buf[64000];
   static uint32_t ptr = 0;
-  for (size_t i = 0; i < size && ptr < 64000; )
-    dump_buf[ptr++] = buf[i++];
+  static uint32_t push_size[800], push_n = 0;
+  if (ptr < 64000 && push_n < 800) push_size[push_n++] = size;
+  for (size_t i = 0; i < size && ptr < 64000; ) dump_buf[ptr++] = buf[i++];
   if (ptr == 64000) {
     printf("== by ULP ==\n");
     for (int i = 0; i < 64000; i += 640) {
@@ -240,6 +246,10 @@ if (1) {
       vTaskDelay(1);
     }
     printf("\n== end ==\n");
+    if (0) {
+      for (uint32_t i = 0, t = 0; i < push_n; i++)
+        printf("%" PRIu32 " %" PRIu32 "\n", push_size[i], t += push_size[i]);
+    }
     ptr++;  // Suppress further dumps
   }
 }

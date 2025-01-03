@@ -34,7 +34,7 @@ void app_main(void)
 
   // `esp_pm/include/esp_pm.h`: Type is no longer implementation-specific
   ESP_ERROR_CHECK(esp_pm_configure(&(esp_pm_config_t){
-    .max_freq_mhz =  80,
+    .max_freq_mhz = 160,
     .min_freq_mhz =  10,
     .light_sleep_enable = true,
   }));
@@ -323,7 +323,7 @@ if (0) {
     }
   }
   while (1) {
-    vTaskDelay(20 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(20));
     if (state == STATE_LISTEN) {
       // Push data in
       uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
