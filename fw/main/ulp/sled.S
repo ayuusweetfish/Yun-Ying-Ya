@@ -5,7 +5,7 @@
 .L15: nop
 .L10: nop
 .L05: nop
-      j 0f
+      ret
 
 
 .p2align 2
@@ -18,7 +18,7 @@
 .option norvc
 .L06: nop
 .option rvc
-      j 0f
+      ret
 
 
 .p2align 2
@@ -29,7 +29,7 @@
 .L08: nop
 .option rvc
 .L03: nop
-      j 0f
+      ret
 
 
 .p2align 2
@@ -38,8 +38,8 @@
 .L17: nop
 .L12: nop
 .option rvc
-.L07: lw a0, 0(a0)  // Assumes a0 = 0
-      j 0f
+.L07: lw a0, 0(a0)  // Assumes a0 is a valid memory location
+      ret
 
 
 .p2align 2
@@ -50,12 +50,8 @@
 .L11: nop
       nop   // 8
       nop   // 3
-      j 0f
-
-
-.p2align 2
-0:
       ret
+
 
 .p2align 2
 .global sled

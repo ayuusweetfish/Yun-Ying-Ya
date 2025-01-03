@@ -44,6 +44,8 @@ static inline uint32_t read()
   uint32_t cycles_start, cycles_end;
   uint32_t scratch;
   asm (
+    "li a0, 0\n"
+
     ".p2align 2\n"
     ".option norvc\n"
     // Obtain current cycles until >= next_edge
@@ -57,13 +59,12 @@ static inline uint32_t read()
     "andi %[scratch], %[scratch], 31\n" // Mask spurious large values during startup
     "slli %[scratch], %[scratch], 2\n"
     "lw %[scratch], %[sled_base](%[scratch])\n"
-    "li a0, 0\n"
     "jalr ra, 0(%[scratch])\n"
 
     : [scratch] "=&r" (scratch),
       [cycles_start] "=&r" (cycles_start)
     : [next_edge] "r" (next_edge),
-      [sled_base] "i" (0x68 /* sled */)
+      [sled_base] "i" (0x64 /* sled */)
     : "a0", "ra"
   );
 
@@ -134,7 +135,7 @@ static inline uint32_t read()
 
   uint32_t x = 0;
 
-if (cycles_end - cycles_start < 87 + 9 * 20 /* number of bits read */) {
+if (cycles_end - cycles_start < 77 + 9 * 20 /* number of bits read */) {
   // This will give very rare glitches due to bus contention (0~5 per second),
   // but it should be very acceptable
   uint32_t n = 0;
@@ -201,6 +202,7 @@ if (x != 0x8000) {
   return x;
 }
 
+// TODO: Synchronise!
 static inline uint32_t read_less()
 {
   uint32_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11,
@@ -515,8 +517,7 @@ int main()
   uint32_t offs = check_edges();
 
   uint32_t t = ULP_RISCV_GET_CCOUNT();
-  next_edge = t - t % 1252 + 1252 * 4000 + offs - 52;
-  asm volatile ("call 0x64\n");
+  next_edge = t - t % 1252 + 1252 * 4000 + offs - 42;
 
   uint32_t block = 0;
   int successive = 0;
