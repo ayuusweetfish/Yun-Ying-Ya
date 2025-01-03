@@ -13,8 +13,8 @@ volatile uint32_t check_power = 0;
 
 uint32_t c0 = 0, c1 = 0, c2 = 0, c3 = 0;
 
-#define AUDIO_BUF_SIZE 2048
-uint16_t audio_buf[AUDIO_BUF_SIZE];
+#define ULP_AUDIO_BUF_SIZE 2048
+uint16_t audio_buf[ULP_AUDIO_BUF_SIZE];
 uint32_t cur_buf_ptr;
 
 uint32_t debug[10];
@@ -26,6 +26,7 @@ uint32_t next_edge = 0;
 uint32_t last_sample = 0;
 
 extern uint32_t sled[32];
+#define SLED_ADDRESS 0x64 // Workaround for unsupported relocation scheme
 
 #pragma GCC push_options
 #pragma GCC optimize("O3")
@@ -36,14 +37,14 @@ static inline uint32_t read()
            b24, b25, b26, b27, b28, b29, b30, b31;
 
   uint32_t addr;
-  __asm__ volatile (
+  asm (
     "lui %[addr], 0xa\n"  // Address: 0xa424 (main CPU 0x60008424)
     : [addr] "=r" (addr)
   );
 
   uint32_t cycles_start, cycles_end;
   uint32_t scratch;
-  asm (
+  asm volatile (
     "li a0, 0\n"
 
     ".p2align 2\n"
@@ -64,11 +65,11 @@ static inline uint32_t read()
     : [scratch] "=&r" (scratch),
       [cycles_start] "=&r" (cycles_start)
     : [next_edge] "r" (next_edge),
-      [sled_base] "i" (0x64 /* sled */)
+      [sled_base] "i" (SLED_ADDRESS)
     : "a0", "ra"
   );
 
-  __asm__ volatile (
+  asm volatile (
     ".p2align 2\n"
     ".option norvc\n"
     "lw %[b0], 0x424(%[addr])\n"
@@ -135,71 +136,46 @@ static inline uint32_t read()
 
   uint32_t x = 0;
 
-// Most: (60~70) + 9 * N
-// Seems a bit more (~5?) with even numbers
-if (cycles_end - cycles_start <= 73 + 9 * 23 /* number of bits read */) {
-  // This will give very rare glitches due to bus contention (0~5 per second),
-  // but it should be very acceptable
-  uint32_t n = 0;
-if (0) {
-// '\n'.join('bool b{0}_bck = (b{0} >> (10 + PIN_I2S_BCK_PROBE)) & 1, b{0}_din = (b{0} >> (10 + PIN_I2S_DIN)) & 1;'.format(i) for i in range(26))
-// '\n'.join('if (b{0}_bck && !b{1}_bck) {{ x = (x << 1) | b{0}_din; n++; }}'.format(i, i-1) for i in range(26))
-}
-// '\n'.join('L{0}: if ((b{0} >> (10 + PIN_I2S_BCK_PROBE)) & 1) {{ x = (x << 1) | ((b{0} >> (10 + PIN_I2S_DIN)) & 1); n++; goto L{1}; }}'.format(i, i+2) for i in range(26))
-  L0: if ((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b0 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L2; }
-  L1: if ((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b1 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L3; }
-  L2: if ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b2 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L4; }
-  L3: if ((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b3 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L5; }
-  L4: if ((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b4 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L6; }
-  L5: if ((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b5 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L7; }
-  L6: if ((b6 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b6 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L8; }
-  L7: if ((b7 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b7 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L9; }
-  L8: if ((b8 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b8 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L10; }
-  L9: if ((b9 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b9 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L11; }
-  L10: if ((b10 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b10 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L12; }
-  L11: if ((b11 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b11 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L13; }
-  L12: if ((b12 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b12 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L14; }
-  L13: if ((b13 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b13 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L15; }
-  L14: if ((b14 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b14 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L16; }
-  L15: if ((b15 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b15 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L17; }
-  L16: if ((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b16 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L18; }
-  L17: if ((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b17 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L19; }
-  L18: if ((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L20; }
-  L19: if ((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L21; }
-  L20: if ((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L22; }
-  L21: if ((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b21 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L23; }
-  L22: if ((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b22 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L24; }
-  L23: // if ((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L25; }
-  L24: // if ((b24 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b24 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L26; }
-  L25: // if (((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b25 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L27; }
-  L26: L27:
+  // Most: (60~70) + 9 * N
+  // Seems a bit more (~5?) with even numbers
+  if (cycles_end - cycles_start <= 73 + 9 * 23 /* number of bits read */) {
+    // This will give very rare glitches due to bus contention (0~5 per second),
+    // but it should be very acceptable
+    uint32_t n = 0;
+    L0: if ((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b0 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L2; }
+    L1: if ((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b1 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L3; }
+    L2: if ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b2 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L4; }
+    L3: if ((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b3 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L5; }
+    L4: if ((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b4 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L6; }
+    L5: if ((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b5 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L7; }
+    L6: if ((b6 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b6 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L8; }
+    L7: if ((b7 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b7 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L9; }
+    L8: if ((b8 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b8 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L10; }
+    L9: if ((b9 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b9 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L11; }
+    L10: if ((b10 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b10 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L12; }
+    L11: if ((b11 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b11 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L13; }
+    L12: if ((b12 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b12 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L14; }
+    L13: if ((b13 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b13 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L15; }
+    L14: if ((b14 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b14 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L16; }
+    L15: if ((b15 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b15 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L17; }
+    L16: if ((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b16 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L18; }
+    L17: if ((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b17 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L19; }
+    L18: if ((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L20; }
+    L19: if ((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L21; }
+    L20: if ((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L22; }
+    L21: if ((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b21 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L23; }
+    L22: if ((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b22 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L24; }
+    L23: // if ((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L25; }
+    L24: // if ((b24 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b24 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L26; }
+    L25: // if (((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b25 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L27; }
+    L26: L27:
 
-  x <<= (16 - n);
-  x &= 0xffff;
-  last_sample = x;
-} else {
-  x = last_sample;
-  // c1++; // Around 1%
-}
-
-/*
-if (x != 0x8000) {
-if (0) {
-  debug[0] = b0;
-  debug[1] = b1;
-  debug[2] = b2;
-  debug[3] = b3;
-  debug[4] = b4;
-  debug[5] = b5;
-  debug[6] = b6;
-  debug[7] = b7;
-  debug[8] = b8;
-  debug[9] = b9;
-}
-  c0++;
-} else c2++;
-  c3 = cycles_end - cycles_start;
-*/
+    x <<= (16 - n);
+    x &= 0xffff;
+    last_sample = x;
+  } else {
+    x = last_sample;
+  }
 
   next_edge += 1252;
 
@@ -213,14 +189,14 @@ static inline uint32_t read_less()
            b24, b25, b26, b27, b28, b29, b30, b31;
 
   uint32_t addr;
-  __asm__ volatile (
+  asm (
     "lui %[addr], 0xa\n"  // Address: 0xa424 (main CPU 0x60008424)
     : [addr] "=r" (addr)
   );
 
   uint32_t cycles_start, cycles_end;
   uint32_t scratch;
-  asm (
+  asm volatile (
     "li a0, 0\n"
 
     ".p2align 2\n"
@@ -241,11 +217,11 @@ static inline uint32_t read_less()
     : [scratch] "=&r" (scratch),
       [cycles_start] "=&r" (cycles_start)
     : [next_edge] "r" (next_edge),
-      [sled_base] "i" (0x64 /* sled */)
+      [sled_base] "i" (SLED_ADDRESS)
     : "a0", "ra"
   );
 
-  __asm__ volatile (
+  asm volatile (
     ".p2align 2\n"
     ".option norvc\n"
     "lw %[b0], 0x424(%[addr])\n"
@@ -312,55 +288,45 @@ static inline uint32_t read_less()
 
   uint32_t x = 0;
 
-// Most: (60~70) + 9 * N
-if (cycles_end - cycles_start <= 73 + 9 * 21 /* number of bits read */) {
-  // This will give very rare glitches due to bus contention (0~5 per second),
-  // but it should be very acceptable
-  uint32_t n = 0;
-if (0) {
-// '\n'.join('bool b{0}_bck = (b{0} >> (10 + PIN_I2S_BCK_PROBE)) & 1, b{0}_din = (b{0} >> (10 + PIN_I2S_DIN)) & 1;'.format(i) for i in range(26))
-// '\n'.join('if (b{0}_bck && !b{1}_bck) {{ x = (x << 1) | b{0}_din; n++; }}'.format(i, i-1) for i in range(26))
-}
-// '\n'.join('L{0}: if ((b{0} >> (10 + PIN_I2S_BCK_PROBE)) & 1) {{ x = (x << 1) | ((b{0} >> (10 + PIN_I2S_DIN)) & 1); n++; goto L{1}; }}'.format(i, i+2) for i in range(26))
-  L0: if ((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b0 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L2; }
-  L1: if ((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b1 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L3; }
-  L2: if ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b2 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L4; }
-  L3: if ((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b3 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L5; }
-  L4: if ((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b4 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L6; }
-  L5: if ((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b5 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L7; }
-  L6: if ((b6 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b6 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L8; }
-  L7: if ((b7 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b7 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L9; }
-  L8: if ((b8 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b8 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L10; }
-  L9: if ((b9 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b9 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L11; }
-  L10: if ((b10 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b10 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L12; }
-  L11: if ((b11 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b11 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L13; }
-  L12: if ((b12 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b12 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L14; }
-  L13: if ((b13 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b13 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L15; }
-  L14: if ((b14 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b14 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L16; }
-  L15: if ((b15 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b15 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L17; }
-  L16: if ((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b16 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L18; }
-  L17: if ((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b17 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L19; }
-  L18: if ((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L20; }
-  L19: if ((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L21; }
-  L20: if ((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L22; }
-  L21: // if ((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b21 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L23; }
-  L22: // if ((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b22 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L24; }
-  L23: // if ((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L25; }
-  L24: // if ((b24 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b24 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L26; }
-  L25: // if (((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b25 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L27; }
-  L26: L27:
+  // Most: (60~70) + 9 * N
+  if (cycles_end - cycles_start <= 73 + 9 * 21 /* number of bits read */) {
+    // This will give very rare glitches due to bus contention (0~5 per second),
+    // but it should be very acceptable
+    uint32_t n = 0;
+    L0: if ((b0 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b0 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L2; }
+    L1: if ((b1 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b1 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L3; }
+    L2: if ((b2 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b2 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L4; }
+    L3: if ((b3 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b3 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L5; }
+    L4: if ((b4 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b4 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L6; }
+    L5: if ((b5 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b5 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L7; }
+    L6: if ((b6 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b6 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L8; }
+    L7: if ((b7 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b7 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L9; }
+    L8: if ((b8 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b8 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L10; }
+    L9: if ((b9 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b9 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L11; }
+    L10: if ((b10 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b10 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L12; }
+    L11: if ((b11 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b11 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L13; }
+    L12: if ((b12 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b12 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L14; }
+    L13: if ((b13 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b13 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L15; }
+    L14: if ((b14 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b14 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L16; }
+    L15: if ((b15 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b15 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L17; }
+    L16: if ((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b16 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L18; }
+    L17: if ((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b17 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L19; }
+    L18: if ((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L20; }
+    L19: if ((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L21; }
+    L20: if ((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L22; }
+    L21: // if ((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b21 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L23; }
+    L22: // if ((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b22 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L24; }
+    L23: // if ((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L25; }
+    L24: // if ((b24 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b24 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L26; }
+    L25: // if (((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b25 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L27; }
+    L26: L27:
 
-  x <<= (16 - n);
-  x &= 0xffff;
-  last_sample = x;
-} else {
-  x = last_sample;
-}
-
-/*
-if (x != 0x8000) c0++; else c1++;
-  c3 = cycles_end - cycles_start;
-*/
+    x <<= (16 - n);
+    x &= 0xffff;
+    last_sample = x;
+  } else {
+    x = last_sample;
+  }
 
   next_edge += 1252;
 
@@ -377,7 +343,7 @@ static uint32_t check_edges()
            b24, b25, b26, b27, b28, b29, b30, b31;
 
   uint32_t addr;
-  __asm__ volatile (
+  asm (
     "lui %[addr], 0xa\n"  // Address: 0xa424 (main CPU 0x60008424)
     : [addr] "=r" (addr)
   );
@@ -391,7 +357,7 @@ static uint32_t check_edges()
     ulp_riscv_delay_cycles((seed >> 11) & 4095);
 
     uint32_t cycles_start, cycles_end;
-    __asm__ volatile (
+    asm volatile (
       ".p2align 2\n"
       ".option norvc\n"
       "rdcycle %[cycles_start]\n"
@@ -437,7 +403,7 @@ static uint32_t check_edges()
   #define RECORD_EDGE(_n) { \
     uint32_t ti = (cycles_start + 9 * (_n)) % 1252; \
     if (edge_count == 0) t = ti; \
-    else if (t > ti) t = ti; /* TODO: Handle wraprounds */ \
+    else if ((t - ti + 1252) % 1252 < 1252 / 2) t = ti; /* TODO: Handle wraprounds */ \
     edge_count++; continue; \
   }
     if (!((b1 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b0 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(1)
@@ -467,6 +433,9 @@ int main()
   ulp_riscv_gpio_init(PIN_I2S_BCK_PROBE);
   ulp_riscv_gpio_init(PIN_I2S_WS_PROBE);
   ulp_riscv_gpio_init(PIN_I2S_DIN);
+
+  // Assertion
+  if (SLED_ADDRESS != (uint32_t)&sled[0]) while (1) { }
 
   for (int i = 0; i < 21; i++) {
     uint32_t cyc0, cyc1;
@@ -506,7 +475,7 @@ int main()
         power += (uint32_t)(s_diff * s_diff) / 64;
         last_s16 = s16;
       }
-      cur_buf_ptr = block = (block + 64) % AUDIO_BUF_SIZE;
+      cur_buf_ptr = block = (block + 64) % ULP_AUDIO_BUF_SIZE;
       c2 = power;
       if (power >= 1000) {
         if (++successive >= 4) {
@@ -524,7 +493,7 @@ int main()
         uint32_t sample = read();
         audio_buf[block + i] = sample;
       }
-      cur_buf_ptr = block = (block + 64) % AUDIO_BUF_SIZE;
+      cur_buf_ptr = block = (block + 64) % ULP_AUDIO_BUF_SIZE;
     }
   }
 }

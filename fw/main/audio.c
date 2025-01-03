@@ -228,6 +228,7 @@ void audio_task(void *_unused)
 
 void audio_push(const int32_t *buf, size_t size)
 {
+if (0) {
   static int16_t dump_buf[64000];
   static uint32_t ptr = 0;
   for (size_t i = 0; i < size && ptr < 64000; )
@@ -242,6 +243,7 @@ void audio_push(const int32_t *buf, size_t size)
     printf("\n== end ==\n");
     ptr++;  // Suppress further dumps
   }
+}
 
   external_push_buf = buf;
   external_push_size = size;

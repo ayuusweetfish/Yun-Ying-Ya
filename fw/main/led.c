@@ -515,8 +515,7 @@ static inline struct tint state_render(enum led_state_t state, uint32_t time)
     return (struct tint){ 0, 0, 1 };
 
   case LED_STATE_SPEECH:
-    // return (struct tint){ 1, 1, 1 };
-    return (struct tint){ 0.1f, 0.1f, 0.1f };
+    return (struct tint){ 1, 1, 1 };
 
   case LED_STATE_WAIT_RESPONSE: {
     float t = (float)time / 2000.0f * (float)(M_PI * 2);
@@ -533,6 +532,9 @@ static inline struct tint state_render(enum led_state_t state, uint32_t time)
 
   case LED_STATE_ERROR:
     return (struct tint){ 1, 0.2f, 0 };
+
+  case LED_STATE_SIGNAL:
+    return (struct tint){ 0.1f, 0.1f, 0.1f };
 
   default:
     return (struct tint){ 0, 0, 0 };

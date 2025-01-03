@@ -44,6 +44,7 @@ enum led_state_t {
   LED_STATE_WAIT_RESPONSE,
   LED_STATE_RUN,
   LED_STATE_ERROR,
+  LED_STATE_SIGNAL,
 };
 void led_set_state(enum led_state_t state, int transition);
 bool led_set_program(const char *program_source);

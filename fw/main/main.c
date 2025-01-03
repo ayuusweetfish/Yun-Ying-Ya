@@ -276,7 +276,7 @@ if (0) {
   for (int i = 0; i < 21; i++)
     printf("debuga %2u %3u\n", (unsigned)i, (unsigned)((&ulp_debuga)[i]));
 
-  while (1) {
+  while (0) {
     bool waken = xSemaphoreTake(sem_ulp, 0);
     uint16_t sample = ulp_c1;
     sample = ((const int16_t *)&ulp_audio_buf)[(ulp_cur_buf_ptr - 1 + 2048) % 2048];
@@ -294,7 +294,7 @@ if (0) {
       ESP_LOGI(TAG, "DIN: %s", s);
       ESP_LOGI(TAG, "");
     }
-    led_set_state(waken ? LED_STATE_SPEECH : LED_STATE_IDLE, 50);
+    led_set_state(waken ? LED_STATE_SIGNAL : LED_STATE_IDLE, 50);
     vTaskDelay(pdMS_TO_TICKS(100));
   }
 
@@ -330,12 +330,14 @@ if (0) {
         audio_resume();
       } else if (audio_can_sleep()) {
         ESP_LOGI(TAG, "Can sleep now!");
+        led_set_state(LED_STATE_IDLE, 50);
         audio_pause();
         ulp_wakeup_signal = 0;
         ulp_check_power = 1;
         xQueueReset((QueueHandle_t)sem_ulp);
         xSemaphoreTake(sem_ulp, portMAX_DELAY);
         ESP_LOGI(TAG, "Resuming now!");
+        led_set_state(LED_STATE_SIGNAL, 50);
         last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
         buf_push((last_push - 1536 + 2048) % 2048, last_push);
         audio_clear_can_sleep();
