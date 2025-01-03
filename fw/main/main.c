@@ -181,8 +181,8 @@ if (0) {
 
   ulp_check_power = 1;
 
-if (0) {
-  // ulp_check_power = 0;
+if (1) {
+  ulp_check_power = 0;
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   printf("Starting!\n");
   uint32_t last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
@@ -278,7 +278,8 @@ if (0) {
 
   while (1) {
     bool waken = xSemaphoreTake(sem_ulp, 0);
-    uint16_t sample = ulp_c1; // ((const int16_t *)&ulp_audio_buf)[(ulp_cur_buf_ptr - 1 + 2048) % 2048];
+    uint16_t sample = ulp_c1;
+    sample = ((const int16_t *)&ulp_audio_buf)[(ulp_cur_buf_ptr - 1 + 2048) % 2048];
     ESP_LOGI(TAG, "Wake up: power=%10" PRIu32 " sample=%04" PRIx16 " count=%04" PRIu32 " cycles=%4" PRIu32 " %c", ulp_c2, sample, ulp_c0, ulp_c3, waken ? '*' : ' ');
     if (1) {
       static const int N = 10;
