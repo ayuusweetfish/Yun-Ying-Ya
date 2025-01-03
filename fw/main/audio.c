@@ -80,7 +80,7 @@ static bool speech_ended_by_threshold = false;
 static bool i2s_channel_paused = false;
 
 static atomic_flag request_to_disable = ATOMIC_FLAG_INIT; // Active-low
-static const int32_t *_Atomic external_push_buf = NULL;
+static const int16_t *_Atomic external_push_buf = NULL;
 static size_t external_push_size;
 
 void audio_task(void *_unused)
@@ -189,7 +189,7 @@ void audio_task(void *_unused)
       xTaskNotifyWaitIndexed(/* index */ 0, 0, 0, NULL, portMAX_DELAY);
     }
     if (external_push_buf != 0) {
-      const int32_t *buf = external_push_buf;
+      const int16_t *buf = external_push_buf;
       uint32_t size = external_push_size;
       uint32_t start = 0;
 
@@ -197,9 +197,8 @@ void audio_task(void *_unused)
       while (size > 0) {
         uint32_t n_1 = min(size, buf_count - n);
         assert(n_1 > 0);  // Assumes size != 0 && n != buf_count
-        // memcpy(buf32 + n, buf + start, n_1 * sizeof(int32_t));
         for (uint32_t i = 0; i < n_1; i++)
-          buf32[n + i] = buf[start + i] << 16;
+          buf32[n + i] = (int32_t)(buf[start + i]) << 16;
         n += n_1;
         start += n_1;
         size -= n_1;
@@ -226,9 +225,9 @@ void audio_task(void *_unused)
 // We use a unified notification for everything --
 // external data push, task pause, and I2S start signal.
 
-void audio_push(const int32_t *buf, size_t size)
+void audio_push(const int16_t *buf, size_t size)
 {
-if (0) {
+if (1) {
   static int16_t dump_buf[64000];
   static uint32_t ptr = 0;
   for (size_t i = 0; i < size && ptr < 64000; )

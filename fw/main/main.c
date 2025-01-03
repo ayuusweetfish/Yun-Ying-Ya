@@ -1,6 +1,7 @@
 #include "main.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <inttypes.h>
 #include "sdkconfig.h"
 
@@ -308,14 +309,21 @@ if (0) {
   {
     if (last_push == cur_push) return;
     const int16_t *in_buf = (const int16_t *)&ulp_audio_buf;
-    static int32_t buf[2048];
-    uint32_t p = 0;
-    for (uint32_t i = last_push; i != cur_push; i = (i + 1) % 2048)
-      buf[p++] = in_buf[i];
-    audio_push(buf, p);
+    static int16_t buf[2048];
+    if (last_push < cur_push) {
+      int n1 = cur_push - last_push;
+      memcpy(buf, in_buf + last_push, sizeof(int16_t) * n1);
+      audio_push(buf, n1);
+    } else {
+      int n1 = 2048 - last_push;
+      memcpy(buf, in_buf + last_push, sizeof(int16_t) * n1);
+      int n2 = cur_push;
+      memcpy(buf + n1, in_buf, sizeof(int16_t) * n2);
+      audio_push(buf, n1 + n2);
+    }
   }
   while (1) {
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(20 / portTICK_PERIOD_MS);
     if (state == STATE_LISTEN) {
       // Push data in
       uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
