@@ -47,11 +47,11 @@ local delay, fade, blink, breath = (function ()
     n = assert_range(n, 1, MAX_T)
     t1 = assert_range(t1, 10, MAX_T)
     t2 = assert_range(t2, 10, MAX_T)
-    local ramp = math.min(t1, t2) * 0.2
+    local ramp = math.min(t1, t2) * 0.5
     for _ = 1, n do
-      local_line(ramp, 'F',  tint(r, g, b))
+      local_line(ramp, 'F', tint(r, g, b))
       local_line(t1 - ramp, 'D')
-      local_line(ramp, 'F',  tint(R, G, B))
+      local_line(ramp, 'F', tint(R, G, B))
       local_line(t2 - ramp, 'D')
     end
   end

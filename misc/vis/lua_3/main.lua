@@ -7,6 +7,7 @@ local load_duck = function (s)
     tostring = tostring,
     select = select,
     type = type,
+    error = error,
     line = function (l)
       -- Parse program line
       local line = {}
@@ -16,6 +17,7 @@ local load_duck = function (s)
       end
       line['orig_text'] = string.format('[%d] ', #prog + 1) .. l
       prog[#prog + 1] = line
+      print(l)
     end,
   }
   local f, e = load(io.open('sys.lua'):read('a') .. s, 'duck')
@@ -25,7 +27,10 @@ local load_duck = function (s)
   return prog
 end
 
-local prog = load_duck(io.popen('pbpaste'):read('a'))
+local prog_str = io.popen('pbpaste'):read('a')
+local prog_str_matched = prog_str:match('```.-\n(.+)\n```')
+if prog_str_matched then prog_str = prog_str_matched end
+local prog = load_duck(prog_str)
 local eval_prog = function (T)
   local R, G, B = 0, 0, 0   -- Current colour
   if T < 0 then return R, G, B, '' end
@@ -82,8 +87,13 @@ function love.update(dt)
 end
 
 function love.draw()
-  love.graphics.clear(0.98, 0.98, 0.975, 1)
-  love.graphics.setColor(r, g, b)
+  local base_r, base_g, base_b = 0.1, 0.1, 0.1
+  love.graphics.clear(base_r, base_g, base_b)
+  love.graphics.setColor(
+    base_r + (1 - base_r) * r,
+    base_g + (1 - base_g) * g,
+    base_b + (1 - base_b) * b,
+    1)
   local w, h = love.graphics.getDimensions()
   local x = w / 2
   local y = h / 2
@@ -91,7 +101,7 @@ function love.draw()
   love.graphics.circle('fill', x, y, radius)
   love.graphics.setColor(0.5, 0.5, 0.5)
   love.graphics.circle('line', x, y, radius)
-  love.graphics.setColor(0.1, 0.1, 0.1)
+  love.graphics.setColor(0.8, 0.8, 0.8)
   love.graphics.printf(string.format('%.2f', T), 0, h * 0.75, w, 'center')
   love.graphics.printf(orig_text, 0, h * 0.79, w, 'center')
   love.graphics.printf(string.format('%.2f  %.2f  %.2f', r, g, b), 0, h * 0.83, w, 'center')
