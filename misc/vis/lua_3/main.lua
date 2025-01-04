@@ -8,6 +8,7 @@ local load_duck = function (s)
     select = select,
     type = type,
     error = error,
+    print = print,
     line = function (l)
       -- Parse program line
       local line = {}
