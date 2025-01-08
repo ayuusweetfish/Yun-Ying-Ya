@@ -62,7 +62,7 @@ if (0) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
-if (0) {
+if (1) {
   bool gauge_valid = gauge_init();
   if (gauge_valid) {
     gauge_wake();
@@ -84,7 +84,7 @@ if (0) {
   ESP_ERROR_CHECK(ret);
 
   // Wi-Fi
-if (0) {
+if (1) {
   wifi_init_sta();
   led_set_state(LED_STATE_CONN_CHECK, 500);
   int http_test_result = http_test();
@@ -334,7 +334,7 @@ if (0) {
         state = STATE_SPEECH;
         led_set_state(LED_STATE_SPEECH, 500);
         last_sent = 0;
-        // post_open(p);
+        post_open(p);
         audio_resume();
       } else if (audio_can_sleep()) {
         ESP_LOGI(TAG, "Can sleep now!");
@@ -357,16 +357,18 @@ if (0) {
     if (state == STATE_SPEECH) {
       bool is_ended = audio_speech_ended();
       int n = audio_speech_buffer_size();
+      if (is_ended) audio_pause();
       printf("Speech buffer size %d\n", n);
       // Send new samples to the server
       if (n > last_sent) {
-        // post_write(p, audio_speech_buffer() + last_sent, (n - last_sent) * sizeof(int16_t));
+        post_write(p, audio_speech_buffer() + last_sent, (n - last_sent) * sizeof(int16_t));
         last_sent = n;
       }
+      printf("Written\n");
       if (is_ended) {
-        audio_pause();
+        printf("Finishing!\n");
         state = STATE_LISTEN;
-        const char *s = NULL; // post_finish(p);
+        const char *s = post_finish(p);
         printf("Result: %s\n", s != NULL ? s : "(null)");
         if (s != NULL && led_set_program(s)) {
           led_set_state(LED_STATE_RUN, 500);
@@ -377,6 +379,7 @@ if (0) {
           vTaskDelay(2000 / portTICK_PERIOD_MS);
           led_set_state(LED_STATE_IDLE, 500);
         }
+        audio_clear_wake_state();
         audio_resume();
         vTaskDelay(100 / portTICK_PERIOD_MS);
         ulp_check_power = 1;

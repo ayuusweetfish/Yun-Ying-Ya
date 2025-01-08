@@ -125,15 +125,16 @@ void audio_task(void *_unused)
         }
         ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f, sample = %08x, RMS = %u, VAD = %u", fetch_result->data_size, fetch_result->data_volume, (int)buf32[0], (unsigned)(rms / buf_count), (unsigned)fetch_result->vad_state);
       }
-      if (fetch_result->wakeup_state == WAKENET_DETECTED) {
+      // XXX: Debug use
+      bool debug_input = false;
+      // static int m = 0; if (wake_state == 0 && (m = (m + 1) % 64) == 63) debug_input = true;
+      if (fgetc(stdin) == 'h') debug_input = true;
+      if (fetch_result->wakeup_state == WAKENET_DETECTED || debug_input) {
         ESP_LOGI(TAG, "Wake word detected");
         wake_state = 1;
         below_speech_threshold_count = 0;
         speech_ended_by_threshold = false;
       }
-      // XXX: Debug use
-      // static int m = 0; if (wake_state == 0 && (m = (m + 1) % 64) == 63) wake_state = 1;
-      if (fgetc(stdin) == 'h') wake_state = 1;
       assert(fetch_result->data_size == fetch_chunksize * sizeof(int16_t));
       feed_count -= fetch_chunksize;
 
