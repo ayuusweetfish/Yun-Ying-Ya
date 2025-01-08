@@ -1,6 +1,6 @@
 idf_component_register(
-  SRCS main.c wifi_conn.c ../../misc/net/net_tsinghua.c time_sync.c request.c i2s.c audio.c led.c gauge.c
-  INCLUDE_DIRS ""
+  SRCS main.c wifi_conn.c ../../misc/net/net_tsinghua.c time_sync.c request.c i2s.c audio.c encode.c led.c gauge.c
+  INCLUDE_DIRS "" "opus-1.5.2/include"
   EMBED_TXTFILES ca.pem
   REQUIRES
     esp-tls
@@ -15,6 +15,7 @@ idf_component_register(
     nvs_flash
     ulp
 )
+add_prebuilt_library(libopus "opus-1.5.2/build/.libs/libopus.a")
 
 set(ulp_app_name ulp_duck)
 set(ulp_sources "ulp/main.c" "ulp/sled.S")

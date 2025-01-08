@@ -299,6 +299,10 @@ if (0) {
     vTaskDelay(pdMS_TO_TICKS(100));
   }
 
+  encode_init();
+
+  heap_caps_print_heap_info(MALLOC_CAP_DEFAULT);
+
   enum {
     STATE_LISTEN,
     STATE_SPEECH,

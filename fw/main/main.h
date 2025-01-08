@@ -35,6 +35,10 @@ const int16_t *audio_speech_buffer();
 int audio_speech_buffer_size();
 bool audio_speech_ended();
 
+void encode_init();
+void encode_restart();
+void encode_push(const int16_t *buf, size_t size);
+
 void led_init();
 enum led_state_t {
   LED_STATE_IDLE,
