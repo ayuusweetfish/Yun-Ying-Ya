@@ -1,4 +1,5 @@
 // cc encode.c -I opus-1.5.2/include opus-1.5.2/.libs/libopus.a
+// ffmpeg -i $NAME.mp3 -ar 16000 -f s16le -acodec pcm_s16le - | ./a.out >/dev/null
 #include <stdio.h>
 #include <opus.h>
 
@@ -16,6 +17,7 @@ int main() {
 
   int n_frames = 0;
   int n_bytes = 0;
+  int max_packet = 0;
 
   while (1) {
     int r = fread(pcm, sizeof(uint16_t), frame_size, stdin);
@@ -23,11 +25,11 @@ int main() {
     if (n < 0) { fprintf(stderr, "Encoder error: %s\n", opus_strerror(n)); break; }
     fwrite((uint8_t []){ n & 0xff, (n >> 8) & 0xff }, sizeof(uint8_t), 2, stdout);
     fwrite(out, sizeof(uint8_t), n, stdout);
-    n_frames += 1; n_bytes += n;
+    n_frames += 1; n_bytes += n; if (max_packet < n) max_packet = n;
     if (feof(stdin) || ferror(stdin) || ferror(stdout)) break;
   }
-  fprintf(stderr, "Frames: %d\nTotal size: %d (%d incl. packet overhead)\n",
-    n_frames, n_bytes, n_bytes + n_frames * 2);
+  fprintf(stderr, "Frames: %d\nMax. packet: %d\nTotal size: %d (%d incl. packet overhead)\n",
+    n_frames, max_packet, n_bytes, n_bytes + n_frames * 2);
 
   opus_encoder_destroy(encoder);
   return 0;
