@@ -322,8 +322,9 @@ if (0) {
       audio_push(buf, n1 + n2);
     }
   }
+  TickType_t last_t = xTaskGetTickCount();
   while (1) {
-    vTaskDelay(pdMS_TO_TICKS(20));
+    vTaskDelayUntil(&last_t, pdMS_TO_TICKS(30));
     if (state == STATE_LISTEN) {
       // Push data in
       uint32_t cur_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
@@ -350,6 +351,7 @@ if (0) {
         buf_push((last_push - 1536 + 2048) % 2048, last_push);
         audio_clear_can_sleep();
         ulp_check_power = 0;
+        last_t = xTaskGetTickCount();
         // audio_resume();
         continue;
       }
@@ -386,6 +388,7 @@ if (0) {
         audio_clear_wake_state();
         ESP_LOGI(TAG, "Finished running, resuming audio listen!");
       }
+      last_t = xTaskGetTickCount();
     }
   }
 

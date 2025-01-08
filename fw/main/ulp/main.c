@@ -170,8 +170,9 @@ static inline uint32_t read()
     L25: // if (((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b25 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L27; }
     L26: L27:
 
+    // Sign-extend suffix / round to zero
     x <<= (16 - n);
-    if (x & (1 << 15)) x |= ((1 << (16 - n)) - 1);  // Round to zero
+    if (x & (1 << 15)) x |= ((1 << (16 - n)) - 1);
     x &= 0xffff;
     last_sample = x;
   } else {
@@ -179,6 +180,8 @@ static inline uint32_t read()
   }
 
   next_edge += 1252;
+  // Unnecessarily overprotective
+  // if (next_edge < ULP_RISCV_GET_CCOUNT()) next_edge += 1252 * 4;
 
   return x;
 }
@@ -322,8 +325,9 @@ static inline uint32_t read_less()
     L25: // if (((b25 >> (10 + PIN_I2S_BCK_PROBE)) & 1)) { x = (x << 1) | ((b25 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L27; }
     L26: L27:
 
+    // Sign-extend suffix / round to zero
     x <<= (16 - n);
-    if (x & (1 << 15)) x |= ((1 << (16 - n)) - 1);  // Round to zero
+    if (x & (1 << 15)) x |= ((1 << (16 - n)) - 1);
     x &= 0xffff;
     last_sample = x;
   } else {
