@@ -227,11 +227,6 @@ void audio_task(void *_unused)
 void audio_push(const int16_t *buf, size_t size)
 {
 if (0) {
-  static uint32_t n = 0;
-  n += size;
-  if (n >= 16000) { ESP_LOGI(TAG, "second!"); n -= 16000; }
-}
-if (0) {
   static int16_t dump_buf[64000];
   static uint32_t ptr = 0;
   static uint32_t push_size[800], push_n = 0;

@@ -171,6 +171,7 @@ static inline uint32_t read()
     L26: L27:
 
     x <<= (16 - n);
+    if (x & (1 << 15)) x |= ((1 << (16 - n)) - 1);  // Round to zero
     x &= 0xffff;
     last_sample = x;
   } else {
@@ -243,9 +244,9 @@ static inline uint32_t read_less()
     "lw %[b16], 0x424(%[addr])\n"
     "lw %[b17], 0x424(%[addr])\n"
     "lw %[b18], 0x424(%[addr])\n"
+  /*
     "lw %[b19], 0x424(%[addr])\n"
     "lw %[b20], 0x424(%[addr])\n"
-  /*
     "lw %[b21], 0x424(%[addr])\n"
     "lw %[b22], 0x424(%[addr])\n"
     "lw %[b23], 0x424(%[addr])\n"
@@ -273,9 +274,9 @@ static inline uint32_t read_less()
      ,[b16] "=&r" (b16)
      ,[b17] "=&r" (b17)
      ,[b18] "=&r" (b18)
+    /*
      ,[b19] "=&r" (b19)
      ,[b20] "=&r" (b20)
-    /*
      ,[b21] "=&r" (b21)
      ,[b22] "=&r" (b22)
      ,[b23] "=&r" (b23)
@@ -289,7 +290,7 @@ static inline uint32_t read_less()
   uint32_t x = 0;
 
   // Most: (60~70) + 9 * N
-  if (cycles_end - cycles_start <= 73 + 9 * 21 /* number of bits read */) {
+  if (cycles_end - cycles_start <= 73 + 9 * 19 /* number of bits read */) {
     // This will give very rare glitches due to bus contention (0~5 per second),
     // but it should be very acceptable
     uint32_t n = 0;
@@ -312,8 +313,8 @@ static inline uint32_t read_less()
     L16: if ((b16 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b16 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L18; }
     L17: if ((b17 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b17 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L19; }
     L18: if ((b18 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b18 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L20; }
-    L19: if ((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L21; }
-    L20: if ((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L22; }
+    L19: // if ((b19 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b19 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L21; }
+    L20: // if ((b20 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b20 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L22; }
     L21: // if ((b21 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b21 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L23; }
     L22: // if ((b22 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b22 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L24; }
     L23: // if ((b23 >> (10 + PIN_I2S_BCK_PROBE)) & 1) { x = (x << 1) | ((b23 >> (10 + PIN_I2S_DIN)) & 1); n++; goto L25; }
@@ -322,6 +323,7 @@ static inline uint32_t read_less()
     L26: L27:
 
     x <<= (16 - n);
+    if (x & (1 << 15)) x |= ((1 << (16 - n)) - 1);  // Round to zero
     x &= 0xffff;
     last_sample = x;
   } else {
@@ -483,6 +485,8 @@ int main()
           wakeup_signal = 1;
           ulp_riscv_wakeup_main_processor();
         }
+      } else if (power < 100) {
+        successive = 0;
       } else {
         successive -= 2;
         if (successive < 0) successive = 0;
