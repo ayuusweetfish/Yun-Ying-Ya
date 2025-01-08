@@ -56,7 +56,6 @@ void audio_init()
   ESP_ERROR_CHECK(i2s_enable());
 
   BaseType_t result = xTaskCreate(audio_task, "audio_task", 16384, NULL, 5, &audio_task_handle);
-  printf("audio_task_handle = %p\n", audio_task_handle);
   if (result == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY)
     printf("! errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY\n");
 }
@@ -177,7 +176,6 @@ void audio_task(void *_unused)
 
   while (1) {
     if (!atomic_flag_test_and_set(&request_to_disable)) {
-      printf("Flag received!\n");
       if (!i2s_channel_paused) {
         i2s_channel_paused = true;
         ESP_ERROR_CHECK(i2s_disable());
