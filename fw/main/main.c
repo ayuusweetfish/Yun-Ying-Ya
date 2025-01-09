@@ -87,6 +87,7 @@ if (1) {
 if (1) {
   wifi_init_sta();
   led_set_state(LED_STATE_CONN_CHECK, 500);
+if (0) {
   int http_test_result = http_test();
   printf("HTTP test result: %d\n", http_test_result);
   if (http_test_result < 0) {
@@ -94,6 +95,7 @@ if (1) {
     vTaskDelay(pdMS_TO_TICKS(1000));
     esp_restart();
   }
+}
 }
   led_set_state(LED_STATE_IDLE, 500);
 
@@ -273,7 +275,8 @@ if (0) {
   }
 
   // Streaming POST request handle
-  post_handle_t *p = post_create();
+  static post_handle_t *p;
+  p = post_create();
 
   ulp_check_power = 1;
   // ulp_check_power = 0;
@@ -346,6 +349,7 @@ if (0) {
         led_set_state(LED_STATE_SPEECH, 500);
         last_sent = 0;
         post_open(p);
+        encode_restart();
         audio_resume();
       } else if (audio_can_sleep()) {
         ESP_LOGI(TAG, "Can sleep now!");
@@ -373,7 +377,11 @@ if (0) {
       printf("Speech buffer size %d\n", n);
       // Send new samples to the server
       if (n > last_sent) {
-        post_write(p, audio_speech_buffer() + last_sent, (n - last_sent) * sizeof(int16_t));
+        void write_to_network(const uint8_t *buf, size_t n) {
+          printf("Write to network: %u\n", (unsigned)n);
+          post_write(p, buf, n);
+        }
+        encode_push(audio_speech_buffer(), n, write_to_network);
         last_sent = n;
       }
       printf("Written\n");
