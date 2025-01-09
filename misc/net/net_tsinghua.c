@@ -574,7 +574,7 @@ static const char *net_tsinghua_login_sign(
 int net_tsinghua_perform_login(const char *user, const char *pwd)
 {
   // Retrieve `ac_id` parameter
-  const char *resp_1 = net_tsinghua_request("http://3.3.3.3/", NULL);
+  const char *resp_1 = net_tsinghua_request("http://1.1.1.1/", NULL);
   if (strcmp(resp_1, "\x7f(error)") == 0) return -1;
 
   const char *ac_id_probe = "http://auth4.tsinghua.edu.cn/index_";

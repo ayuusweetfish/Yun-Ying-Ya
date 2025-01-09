@@ -5,6 +5,7 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "esp_timer.h"
+#include "ping/ping_sock.h"
 #include <string.h>
 
 #if __has_include("wifi_cred.h")
@@ -199,11 +200,51 @@ void wifi_init_sta(void)
   ESP_ERROR_CHECK(esp_timer_create(&nvs_update_timer_args, &nvs_update_timer));
   ESP_ERROR_CHECK(esp_timer_start_periodic(nvs_update_timer, 86400000000ULL));
 
+  // Check connectivity by pinging an address
+  esp_ping_config_t ping_cfg = ESP_PING_DEFAULT_CONFIG();
+  ipaddr_aton("1.1.1.1", &ping_cfg.target_addr);
+  ping_cfg.interval_ms = 100;
+  ping_cfg.timeout_ms = 500;
+  ping_cfg.count = 3;
+
+  esp_ping_handle_t ping;
+  // Stack-allocated (non-static) variables results in a crash during context switches
+  static uint32_t n_reply, time_gap;
+  static bool ended;
+  void on_ping_success(esp_ping_handle_t ping, void *_unused) {
+    n_reply++;
+    uint32_t t;
+    esp_ping_get_profile(ping, ESP_PING_PROF_TIMEGAP, &t, sizeof t);
+    time_gap += t;
+  }
+  void on_ping_timeout(esp_ping_handle_t ping, void *_unused) { }
+  void on_ping_end(esp_ping_handle_t ping, void *_unused) { ended = true; }
+  ESP_ERROR_CHECK(esp_ping_new_session(&ping_cfg, &(esp_ping_callbacks_t){
+    .on_ping_success = on_ping_success,
+    .on_ping_timeout = on_ping_timeout,
+    .on_ping_end = on_ping_end,
+  }, &ping));
+
+recheck:
+  n_reply = time_gap = 0;
+  ended = false;
+  ESP_LOGI(TAG, "Starting ping session");
+  ESP_ERROR_CHECK(esp_ping_start(ping));
+  while (!ended && n_reply == 0) vTaskDelay(pdMS_TO_TICKS(1000));
+  // Don't need to explicitly stop
+  ESP_LOGI(TAG, "Ping result: received %"PRIu32", total time gap %"PRIu32" ms", n_reply, time_gap);
+
 #if HTTP_AUTH
-  ESP_LOGI(TAG, "Performing HTTP-based authentication");
-  int result = net_tsinghua_perform_login(EXAMPLE_ESP_WIFI_AUTH_USER, EXAMPLE_ESP_WIFI_AUTH_PASS);
-  ESP_LOGI(TAG, "Result: %d", result);
+  // Only perform authentication when ping failed
+  if (n_reply == 0) {
+    ESP_LOGI(TAG, "Performing HTTP-based authentication");
+    int result = net_tsinghua_perform_login(EXAMPLE_ESP_WIFI_AUTH_USER, EXAMPLE_ESP_WIFI_AUTH_PASS);
+    ESP_LOGI(TAG, "Result: %d", result);
+    goto recheck;
+  }
 #endif
+
+  esp_ping_delete_session(ping);
 }
 
 #if HTTP_AUTH

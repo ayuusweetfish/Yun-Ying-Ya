@@ -171,8 +171,8 @@ int http_test()
 
   esp_err_t err;
   esp_http_client_handle_t client = esp_http_client_init(&(esp_http_client_config_t){
-    // .url = "https://ayu.land/",
-    .url = "https://www.howsmyssl.com/a/check",
+    .url = "https://ayu.land/",
+    // .url = "https://www.howsmyssl.com/a/check",
     .auth_type = HTTP_AUTH_TYPE_NONE,
     .transport_type = HTTP_TRANSPORT_OVER_SSL,
     .crt_bundle_attach = esp_crt_bundle_attach,

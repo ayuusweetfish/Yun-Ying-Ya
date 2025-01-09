@@ -89,6 +89,11 @@ if (1) {
   led_set_state(LED_STATE_CONN_CHECK, 500);
   int http_test_result = http_test();
   printf("HTTP test result: %d\n", http_test_result);
+  if (http_test_result < 0) {
+    led_set_state(LED_STATE_ERROR, 100);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    esp_restart();
+  }
 }
   led_set_state(LED_STATE_IDLE, 500);
 
@@ -302,6 +307,7 @@ if (0) {
   encode_init();
 
   heap_caps_print_heap_info(MALLOC_CAP_DEFAULT);
+  // heap_caps_dump(MALLOC_CAP_DEFAULT);
 
   enum {
     STATE_LISTEN,
