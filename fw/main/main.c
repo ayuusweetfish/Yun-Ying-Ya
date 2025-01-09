@@ -381,12 +381,11 @@ if (0) {
         size_t encoded_buf_len = encode_pull();
         if (encoded_buf_len > last_sent_encoded) {
           printf("Write to network: %u - %u\n", (unsigned)last_sent_encoded, (unsigned)encoded_buf_len);
-          post_write(p, encode_buffer() + last_sent_encoded, encoded_buf_len);
+          post_write(p, encode_buffer() + last_sent_encoded, encoded_buf_len - last_sent_encoded);
         }
         last_sent = n;
         last_sent_encoded = encoded_buf_len;
       }
-      printf("Written\n");
       if (is_ended) {
         printf("Finishing!\n");
         state = STATE_LISTEN;
