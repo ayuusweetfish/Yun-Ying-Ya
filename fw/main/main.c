@@ -275,8 +275,7 @@ if (0) {
   }
 
   // Streaming POST request handle
-  static post_handle_t *p;
-  p = post_create();
+  post_handle_t *p = post_create();
 
   ulp_check_power = 1;
   // ulp_check_power = 0;
@@ -316,7 +315,7 @@ if (0) {
     STATE_LISTEN,
     STATE_SPEECH,
   } state = STATE_LISTEN;
-  int last_sent = 0;
+  int last_sent = 0, last_sent_encoded = 0;
   uint32_t last_push = 0;
   void buf_push(uint32_t last_push, uint32_t cur_push)
   {
@@ -347,7 +346,7 @@ if (0) {
         printf("Wake-up word detected\n");
         state = STATE_SPEECH;
         led_set_state(LED_STATE_SPEECH, 500);
-        last_sent = 0;
+        last_sent = last_sent_encoded = 0;
         post_open(p);
         encode_restart();
         audio_resume();
@@ -377,12 +376,15 @@ if (0) {
       printf("Speech buffer size %d\n", n);
       // Send new samples to the server
       if (n > last_sent) {
-        void write_to_network(const uint8_t *buf, size_t n) {
-          printf("Write to network: %u\n", (unsigned)n);
-          post_write(p, buf, n);
+        encode_push(audio_speech_buffer(), n);
+        if (is_ended) encode_wait_end();
+        size_t encoded_buf_len = encode_pull();
+        if (encoded_buf_len > last_sent_encoded) {
+          printf("Write to network: %u - %u\n", (unsigned)last_sent_encoded, (unsigned)encoded_buf_len);
+          post_write(p, encode_buffer() + last_sent_encoded, encoded_buf_len);
         }
-        encode_push(audio_speech_buffer(), n, write_to_network);
         last_sent = n;
+        last_sent_encoded = encoded_buf_len;
       }
       printf("Written\n");
       if (is_ended) {

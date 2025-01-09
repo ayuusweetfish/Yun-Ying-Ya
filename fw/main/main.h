@@ -37,7 +37,10 @@ bool audio_speech_ended();
 
 void encode_init();
 void encode_restart();
-void encode_push(const int16_t *buf, size_t end, void (*callback)(const uint8_t *, size_t));
+void encode_push(const int16_t *buf, size_t end);
+size_t encode_pull();
+void encode_wait_end();
+const uint8_t *encode_buffer();
 
 void led_init();
 enum led_state_t {

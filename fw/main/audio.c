@@ -168,6 +168,7 @@ void audio_task(void *_unused)
           led_set_state(LED_STATE_WAIT_RESPONSE, 1500);
           ESP_LOGI(TAG, "Pausing audio processing, as we wait for a run");
           // Directly raise the flag, since `audio_pause()` results in a deadlock
+          atomic_flag_clear(&request_to_disable);
           xTaskNotifyIndexed(audio_task_handle, /* index */ 0, 0, eNoAction);
         }
       }
