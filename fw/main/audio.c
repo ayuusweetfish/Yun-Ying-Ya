@@ -176,7 +176,10 @@ void audio_task(void *_unused)
   }
 
   while (1) {
-    if (!atomic_flag_test_and_set(&request_to_disable)) {
+    // if (!atomic_flag_test_and_set(&request_to_disable)) {
+    // `__atomic_test_and_set` is missing; https://github.com/espressif/esp-idf/issues/15167
+    // Toolchain defines __GCC_ATOMIC_TEST_AND_SET_TRUEVAL == 1
+    if (!__atomic_exchange_n((_Atomic bool *)&request_to_disable, true, __ATOMIC_SEQ_CST)) {
       if (!i2s_channel_paused) {
         i2s_channel_paused = true;
         ESP_ERROR_CHECK(i2s_disable());

@@ -13,6 +13,7 @@ idf_component_register(
     esp_timer
     esp_wifi
     nvs_flash
+    spi_flash
     ulp
 )
 add_prebuilt_library(libopus "opus-1.5.2/build/.libs/libopus.a")
