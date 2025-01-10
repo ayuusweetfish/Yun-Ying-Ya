@@ -104,8 +104,9 @@ static void encode_task(void *_unused)
           out_buf_ptr += n + 1;
         } else {
           memmove(out_buf + out_buf_ptr + 2, out_buf + out_buf_ptr + 1, n);
-          out_buf[out_buf_ptr + 0] = 240 + (n >> 8);
-          out_buf[out_buf_ptr + 1] = n & 0xff;
+          assert(((n + 15) >> 8) <= 15);
+          out_buf[out_buf_ptr + 0] = 240 + ((n + 15) >> 8);
+          out_buf[out_buf_ptr + 1] = (n + 15) & 0xff;
           out_buf_ptr += n + 2;
         }
       }

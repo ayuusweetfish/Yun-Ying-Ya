@@ -2,6 +2,7 @@ import { speechRecognition } from './speech-recognition.js'
 import { answerDescription, answerProgram } from './answer.js'
 import { evalProgram } from './eval_lua.js'
 import { logInteractionStart, logInteractionFill } from './log_db.js'
+import { audioPacketStreamDecoder } from './packet_decode.js'
 import { Buffer } from 'node:buffer'
 
 const debug = !!Deno.env.get('DEBUG')
@@ -43,7 +44,7 @@ const serveReq = async (req) => {
     const sr = await speechRecognition()
     const audioBlocks = []  // Uint8Array[]
     try {
-      for await (const value of req.body) {
+      for await (const value of req.body.pipeThrough(audioPacketStreamDecoder())) {
         sr.push(value)
         audioBlocks.push(value)
       }
