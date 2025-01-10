@@ -1,4 +1,4 @@
-// emcc -O2 -o duck_opus_decoder duck_opus_decoder.c -I opus-1.5.2/include opus_build/.libs/libopus.a -s INITIAL_MEMORY=256KB -s TOTAL_STACK=120KB -s MAXIMUM_MEMORY=256KB -s ALLOW_MEMORY_GROWTH=0 -s STANDALONE_WASM --no-entry
+// emcc -O2 -o duck_opus_decoder duck_opus_decoder.c -I opus-1.5.2/include opus_build/.libs/libopus.a -s INITIAL_MEMORY=128KB -s TOTAL_STACK=60KB -s MAXIMUM_MEMORY=128KB -s ALLOW_MEMORY_GROWTH=0 -s STANDALONE_WASM --no-entry
 #include <opus.h>
 #include <stdint.h>
 #include <emscripten.h>
