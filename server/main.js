@@ -10,7 +10,7 @@ const debug = !!Deno.env.get('DEBUG')
 const retry = async (fn, attempts, errorMsgPrefix) => {
   for (let i = 0; i < attempts; i++) {
     try {
-      return fn()
+      return await fn()
     } catch (e) {
       console.log(`${errorMsgPrefix}: ${e}`)
       if (i === attempts - 1) throw e
