@@ -42,21 +42,30 @@ const serveReq = async (req) => {
   if (req.method === 'POST' && url.pathname === '/') {
     console.log('connected!')
     const sr = await speechRecognition()
-    const audioBlocks = []  // Uint8Array[]
+    const payloadBlocks = []  // Uint8Array[] that concatenates to raw request payload
     try {
-      for await (const value of req.body.pipeThrough(audioPacketStreamDecoder())) {
-        sr.push(value)
-        audioBlocks.push(value)
-      }
+      const [b1, b2] = req.body.tee()
+      await Promise.all([
+        (async () => {
+          for await (const value of b1) {
+            payloadBlocks.push(value)
+          }
+        })(),
+        (async () => {
+          for await (const value of b2.pipeThrough(audioPacketStreamDecoder())) {
+            sr.push(value)
+          }
+        })(),
+      ])
     } catch (e) {
       console.log(`Error reading request: ${e.message} ${e.stack}`)
     }
-    const combinedAudio = new Uint8Array(Buffer.concat(audioBlocks))
+    const combinedPayload = new Uint8Array(Buffer.concat(payloadBlocks))
     try {
       const s = await sr.end()
       console.log(`message "${s}"`)
       const pedestrianMessage = s ? `小鸭小鸭，${s}` : '小鸭小鸭，你好你好！'
-      const assembly = await answerAssembly(t0, combinedAudio, pedestrianMessage)
+      const assembly = await answerAssembly(t0, combinedPayload, pedestrianMessage)
       return new Response(assembly)
     } catch (e) {
       console.log(`Internal server error: ${e} ${e.stack}`)
