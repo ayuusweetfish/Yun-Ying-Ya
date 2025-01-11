@@ -151,9 +151,12 @@ void post_write(const post_handle_t *p, const void *data, size_t len)
 const char *post_finish(const post_handle_t *p)
 {
   esp_http_client_write(p->client, "0\r\n\r\n", 5);
-  static char buf[1024];
+  static char *buf = NULL;
+  const int BUF_SIZE = 4096;
+  if (buf == NULL)
+    buf = heap_caps_malloc(BUF_SIZE, MALLOC_CAP_SPIRAM);
   int content_len = esp_http_client_fetch_headers(p->client);
-  int read_len = esp_http_client_read(p->client, buf, (sizeof buf) - 1);
+  int read_len = esp_http_client_read(p->client, buf, BUF_SIZE - 1);
   esp_http_client_close(p->client);
   if (content_len == -1 || read_len < content_len) {
     ESP_LOGW(TAG, "did not receive complete response (content-length %d, read %d)", content_len, read_len);
