@@ -1,6 +1,9 @@
 import { Buffer } from 'node:buffer'
 import { duckOpusDecoder } from './duck_opus_decoder.js'
 
+// Decodes packets into 16-bit PCM,
+// encodes the values in platform endianness into a `Uint8Array`
+
 export const audioPacketStreamDecoder = () => {
   let buffer = Buffer.alloc(0)
   const decoder = duckOpusDecoder()
@@ -20,7 +23,9 @@ export const audioPacketStreamDecoder = () => {
         if (buffer.length < p + n) break
         const payload = buffer.slice(p, p + n)
         const pcm16 = decoder.decode(payload)
-        const pcm16le = new Uint8Array(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength)
+        const pcm16le = new Uint8Array(
+          pcm16.buffer.slice(pcm16.byteOffset).transferToFixedLength(pcm16.byteLength)
+        )
         controller.enqueue(pcm16le)
         buffer = buffer.slice(p + n)
       }

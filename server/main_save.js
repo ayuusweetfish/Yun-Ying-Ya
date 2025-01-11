@@ -6,7 +6,7 @@ const serveReq = async (req) => {
     let f
     try {
       f = await Deno.open(fileName, { write: true, create: true, truncate: true })
-      await req.body.pipeThrough(new DecompressionStream('gzip')).pipeTo(f.writable)
+      await req.body.pipeTo(f.writable)
     } catch (e) {
       console.log('Error', e)
       return new Response(e.message, { status: 500 })
