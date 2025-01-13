@@ -38,6 +38,7 @@ void audio_init()
   afe_config_t afe_config = AFE_CONFIG_DEFAULT();
   afe_config.aec_init = false;
   afe_config.vad_init = true;
+  afe_config.vad_mode = VAD_MODE_0; // Less restrictive, allow more false positives
   afe_config.wakenet_init = true;
   afe_config.wakenet_model_name = wakenet_name;
   afe_config.afe_ns_mode = NS_MODE_SSP;

@@ -2,7 +2,8 @@
 /fw/main/opus-1.5.2/
 !/fw/main/opus-1.5.2/include/
 /fw/main/opus-1.5.2/include/meson.build
-!/fw/main/opus-1.5.2/build/.libs/libopus.a
+/fw/main/opus_build
+!/fw/main/opus_build/.libs/libopus.a
 /fw/main/wifi_cred.h
 /fw/managed_components/
 /fw/sdkconfig.old

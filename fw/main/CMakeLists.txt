@@ -16,7 +16,8 @@ idf_component_register(
     spi_flash
     ulp
 )
-add_prebuilt_library(libopus "opus-1.5.2/build/.libs/libopus.a")
+add_prebuilt_library(libopus "opus_build/.libs/libopus.a")
+target_link_libraries(${COMPONENT_LIB} PRIVATE libopus)
 
 set(ulp_app_name ulp_duck)
 set(ulp_sources "ulp/main.c" "ulp/sled.S")
