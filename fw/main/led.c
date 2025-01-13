@@ -286,9 +286,9 @@ static inline void output_tint(float r, float g, float b)
 #endif
 
 #if USE_LED_PWM
-  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (1 << 11) - (int)roundf(r * (1 << 11)));
-  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, (1 << 11) - (int)roundf(g * (1 << 11)));
-  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, (1 << 11) - (int)roundf(b * (1 << 11)));
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (1 << 11) - (int)roundf(r * cbrtf(r) * 1.00f * (1 << 11)));
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, (1 << 11) - (int)roundf(g * cbrtf(g) * 0.98f * (1 << 11)));
+  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, (1 << 11) - (int)roundf(b * cbrtf(b) * 0.98f * (1 << 11)));
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
   ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
@@ -510,7 +510,7 @@ static inline struct tint state_render(enum led_state_t state, uint32_t time)
     return (struct tint){ 0.5f, 0.5f, 0.5f };
 
   case LED_STATE_CONN_CHECK:
-    return (struct tint){ 0, 0, 1 };
+    return (struct tint){ 0, 0.4f, 0.8f };
 
   case LED_STATE_SPEECH:
     return (struct tint){ 1, 1, 1 };
@@ -533,6 +533,18 @@ static inline struct tint state_render(enum led_state_t state, uint32_t time)
 
   case LED_STATE_SIGNAL:
     return (struct tint){ 0.05f, 0.05f, 0 };
+
+  case LED_STATE_CALIBRATE: {
+    float t = fmod((float)time / 3000.0f, 3);
+    float r = 0, g = 0, b = 0;
+    if (t < 1) r = (1 - cosf(t * (float)(M_PI * 2))) / 2;
+    else if (t < 2) g = (1 - cosf((t - 1) * (float)(M_PI * 2))) / 2;
+    else b = (1 - cosf((t - 2) * (float)(M_PI * 2))) / 2;
+    r = 0.5 + 0.5 * r;
+    g = 0.5 + 0.5 * g;
+    b = 0.5 + 0.5 * b;
+    return (struct tint){ r, g, b };
+  }
 
   default:
     return (struct tint){ 0, 0, 0 };

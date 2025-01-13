@@ -39,6 +39,8 @@ void app_main(void)
     .light_sleep_enable = true,
   }));
 
+  // led_set_state(LED_STATE_CALIBRATE, 500); while (1) vTaskDelay(pdMS_TO_TICKS(1000));
+
 while (0) {
   vTaskDelay(pdMS_TO_TICKS(1000));
   led_set_state(LED_STATE_IDLE, 500);
@@ -395,6 +397,7 @@ if (0) {
           led_set_state(LED_STATE_RUN, 500);
           vTaskDelay(led_get_program_duration() / portTICK_PERIOD_MS);
           led_set_state(LED_STATE_IDLE, 2000);
+          vTaskDelay(pdMS_TO_TICKS(2000));
         } else {
           led_set_state(LED_STATE_ERROR, 500);
           vTaskDelay(2000 / portTICK_PERIOD_MS);
