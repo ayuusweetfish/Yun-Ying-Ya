@@ -27,6 +27,7 @@ uint32_t last_sample = 0;
 
 extern uint32_t sled[32];
 #define SLED_ADDRESS 0x64 // Workaround for unsupported relocation scheme
+// riscv32-esp-elf-objdump -t build/esp-idf/main/ulp_duck/ulp_duck.elf
 
 #pragma GCC push_options
 #pragma GCC optimize("O3")
