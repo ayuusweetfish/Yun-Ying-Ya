@@ -180,9 +180,9 @@ static inline uint32_t read()
     x = last_sample;
   }
 
-  next_edge += 1252;
+  next_edge += 1250;
   // Unnecessarily overprotective
-  // if (next_edge < ULP_RISCV_GET_CCOUNT()) next_edge += 1252 * 4;
+  // if (next_edge < ULP_RISCV_GET_CCOUNT()) next_edge += 1250 * 4;
 
   return x;
 }
@@ -335,7 +335,7 @@ static inline uint32_t read_less()
     x = last_sample;
   }
 
-  next_edge += 1252;
+  next_edge += 1250;
 
   return x;
 }
@@ -408,9 +408,9 @@ static uint32_t check_edges()
     );
 
   #define RECORD_EDGE(_n) { \
-    uint32_t ti = (cycles_start + 9 * (_n)) % 1252; \
+    uint32_t ti = (cycles_start + 9 * (_n)) % 1250; \
     if (edge_count == 0) t = ti; \
-    else if ((t - ti + 1252) % 1252 < 1252 / 2) t = ti; /* TODO: Handle wraprounds */ \
+    else if ((t - ti + 1250) % 1250 < 1250 / 2) t = ti; /* TODO: Handle wraprounds */ \
     edge_count++; continue; \
   }
     if (!((b1 >> (10 + PIN_I2S_WS_PROBE)) & 1) && ((b0 >> (10 + PIN_I2S_WS_PROBE)) & 1)) RECORD_EDGE(1)
@@ -464,7 +464,7 @@ int main()
   uint32_t offs = check_edges();
 
   uint32_t t = ULP_RISCV_GET_CCOUNT();
-  next_edge = t - t % 1252 + 1252 * 4000 + offs - 36;
+  next_edge = t - t % 1250 + 1250 * 4000 + offs - 36;
 
   uint32_t block = 0;
   int successive = 0;

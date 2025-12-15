@@ -101,7 +101,7 @@ if (0) {
 #if !PIN_I2S_IS_MASTER
   ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
-    .duty_resolution = LEDC_TIMER_5_BIT,
+    .duty_resolution = LEDC_TIMER_4_BIT,
     .timer_num = LEDC_TIMER_1,
     .freq_hz = 1024000,
     .clk_cfg = LEDC_USE_XTAL_CLK,
@@ -111,11 +111,11 @@ if (0) {
     .channel = LEDC_CHANNEL_3,
     .timer_sel = LEDC_TIMER_1,
     .gpio_num = PIN_I2S_BCK,
-    .duty = 0b10000,
+    .duty = 0b1000,
   }));
   ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
-    .duty_resolution = LEDC_TIMER_11_BIT,
+    .duty_resolution = LEDC_TIMER_10_BIT,
     .timer_num = LEDC_TIMER_2,
     .freq_hz = 16000,
     .clk_cfg = LEDC_USE_XTAL_CLK,
@@ -125,16 +125,14 @@ if (0) {
     .channel = LEDC_CHANNEL_4,
     .timer_sel = LEDC_TIMER_2,
     .gpio_num = PIN_I2S_WS,
-    .duty = 0b10000000000 - 4,
-    // .hpoint = 14, // diff = 30
+    .duty = 0b1000000000 - 2,
   }));
   ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
     .channel = LEDC_CHANNEL_5,
     .timer_sel = LEDC_TIMER_2,
     .gpio_num = 10,
-    .duty = 32,
-    // .hpoint = 1024 + 57,
+    .duty = 16,
   }));
 /*
   ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){
@@ -194,13 +192,13 @@ for (int i = 0; i < 6; i++) {
       [offs_2] "i" ((uint8_t *)LEDC_LSTIMER2_VALUE_REG - (uint8_t *)LEDC_LSTIMER1_VALUE_REG)
   );
 
-  t2_cnt %= 32;
-  uint32_t cnt_diff = (t2_cnt - t1_cnt + 32) % 32;
-  REG_WRITE(LEDC_LSCH4_HPOINT_REG, (2048 + (-4 - cnt_diff)) % 2048);
+  t2_cnt %= 16;
+  uint32_t cnt_diff = (t2_cnt - t1_cnt + 16) % 16;
+  REG_WRITE(LEDC_LSCH4_HPOINT_REG, (1024 + (-2 - cnt_diff)) % 1024);
   REG_SET_BIT(LEDC_LSCH4_CONF0_REG, LEDC_PARA_UP_LSCH4);
-  REG_WRITE(LEDC_LSCH5_HPOINT_REG, (1024 + (40 - cnt_diff)));
+  REG_WRITE(LEDC_LSCH5_HPOINT_REG, (512 + (20 - cnt_diff)));
   REG_SET_BIT(LEDC_LSCH5_CONF0_REG, LEDC_PARA_UP_LSCH5);
-  REG_WRITE(LEDC_LSCH6_HPOINT_REG, (2048 + (-96 - cnt_diff)) % 2048);
+  REG_WRITE(LEDC_LSCH6_HPOINT_REG, (1024 + (-48 - cnt_diff)) % 1024);
   REG_SET_BIT(LEDC_LSCH6_CONF0_REG, LEDC_PARA_UP_LSCH6);
 
   portENABLE_INTERRUPTS();
