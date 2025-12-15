@@ -225,7 +225,9 @@ void wifi_init_sta(void)
     .on_ping_end = on_ping_end,
   }, &ping));
 
+#if HTTP_AUTH   // Label unused otherwise
 recheck:
+#endif
   n_reply = time_gap = 0;
   ended = false;
   ESP_LOGI(TAG, "Starting ping session");
