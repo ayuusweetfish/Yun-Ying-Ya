@@ -6,6 +6,7 @@
 #include "pins.h"
 
 void wifi_init_sta();
+bool wifi_is_present();
 
 esp_err_t update_time_from_nvs(void);
 esp_err_t fetch_and_store_time_in_nvs(void*);

@@ -124,7 +124,7 @@ void audio_task(void *_unused)
           int32_t sample = buf16[i];
           rms += sample * sample;
         }
-        ESP_LOGI(TAG, "fetch data size = %d, volume = %.5f, sample = %08x, RMS = %u, VAD = %u", fetch_result->data_size, fetch_result->data_volume, (int)buf32[0], (unsigned)(rms / buf_count), (unsigned)fetch_result->vad_state);
+        ESP_LOGI(TAG, "fetch size = %d, volume = %.5f, sample = %08x, RMS = %u, VAD = %u", fetch_result->data_size, fetch_result->data_volume, (int)buf32[0], (unsigned)(rms / buf_count), (unsigned)fetch_result->vad_state);
       }
       // XXX: Debug use
       bool debug_input = false;

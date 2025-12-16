@@ -484,7 +484,7 @@ int main()
       }
       cur_buf_ptr = block = (block + 64) % ULP_AUDIO_BUF_SIZE;
       c2 = power;
-      if (power >= 1000) {
+      if (power >= 600) {
         if (++successive >= 4) {
           successive = 4;
           wakeup_signal = 1;

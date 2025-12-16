@@ -36,8 +36,11 @@
   #warning "Wi-Fi is currently no-op."
   #warning "To enable, define credentials in wifi_cred.h (refer to wifi_cred.example.h)"
   void wifi_init_sta(void) { }
+  bool wifi_is_present() { return false; }
 
 #else   // Actual implementation, to file end
+
+bool wifi_is_present() { return true; }
 
 #define EXAMPLE_ESP_MAXIMUM_RETRY  5
 

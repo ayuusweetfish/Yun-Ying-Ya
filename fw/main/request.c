@@ -116,22 +116,26 @@ post_handle_t *post_create()
 {
   struct post_handle_t *p = malloc(sizeof(struct post_handle_t));
 
-  p->client = esp_http_client_init(&(esp_http_client_config_t){
-    // .url = "https://play.ayu.land/ya",
-    .url = "http://45.63.5.138:24678/",
-    .auth_type = HTTP_AUTH_TYPE_NONE,
-    .transport_type = HTTP_TRANSPORT_OVER_SSL,
-    .crt_bundle_attach = esp_crt_bundle_attach,
-    .method = HTTP_METHOD_POST,
-    .timeout_ms = 30000,
-    .user_data = p,
-  });
+  if (wifi_is_present())
+    p->client = esp_http_client_init(&(esp_http_client_config_t){
+      // .url = "https://play.ayu.land/ya",
+      .url = "http://45.63.5.138:24678/",
+      .auth_type = HTTP_AUTH_TYPE_NONE,
+      .transport_type = HTTP_TRANSPORT_OVER_SSL,
+      .crt_bundle_attach = esp_crt_bundle_attach,
+      .method = HTTP_METHOD_POST,
+      .timeout_ms = 30000,
+      .user_data = p,
+    });
+  else
+    p->client = NULL;
 
   return p;
 }
 
 void post_open(const post_handle_t *p)
 {
+  if (!p->client) return;
   // Chunked encoding
   // Ref: esp-idf/components/esp_http_client/esp_http_client.c, `http_client_prepare_first_line()`
   esp_http_client_open(p->client, -1);
@@ -139,6 +143,7 @@ void post_open(const post_handle_t *p)
 
 void post_write(const post_handle_t *p, const void *data, size_t len)
 {
+  if (!p->client) return;
   ESP_LOGD(TAG, "writing request payload, %zu bytes", len);
   char s[16];
   int s_len = snprintf(s, sizeof s, "%zx\r\n", len);
@@ -150,6 +155,7 @@ void post_write(const post_handle_t *p, const void *data, size_t len)
 
 const char *post_finish(const post_handle_t *p)
 {
+  if (!p->client) return NULL;
   esp_http_client_write(p->client, "0\r\n\r\n", 5);
   static char *buf = NULL;
   const int BUF_SIZE = 4096;
