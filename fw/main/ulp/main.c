@@ -21,6 +21,7 @@ uint32_t debug[10];
 uint32_t debuga[32];
 
 #define N_EDGES 64
+#define WINDOW_SIZE 128
 
 uint32_t next_edge = 0;
 uint32_t last_sample = 0;
@@ -474,15 +475,15 @@ int main()
       uint32_t sample = read_less();
       audio_buf[block + 0] = sample;
       int16_t last_s16 = (int16_t)sample;
-      for (int i = 1; i < 64; i++) {
+      for (int i = 1; i < WINDOW_SIZE; i++) {
         uint32_t sample = read_less();
         audio_buf[block + i] = sample;
         int32_t s16 = (int16_t)sample;
         int32_t s_diff = last_s16 - s16;
-        power += (uint32_t)(s_diff * s_diff) / 64;
+        power += (uint32_t)(s_diff * s_diff) / WINDOW_SIZE;
         last_s16 = s16;
       }
-      cur_buf_ptr = block = (block + 64) % ULP_AUDIO_BUF_SIZE;
+      cur_buf_ptr = block = (block + WINDOW_SIZE) % ULP_AUDIO_BUF_SIZE;
       c2 = power;
       if (power >= 600) {
         if (++successive >= 4) {
@@ -498,11 +499,11 @@ int main()
       }
     } else {
       uint32_t power = 0;
-      for (int i = 0; i < 64; i++) {
+      for (int i = 0; i < WINDOW_SIZE; i++) {
         uint32_t sample = read();
         audio_buf[block + i] = sample;
       }
-      cur_buf_ptr = block = (block + 64) % ULP_AUDIO_BUF_SIZE;
+      cur_buf_ptr = block = (block + WINDOW_SIZE) % ULP_AUDIO_BUF_SIZE;
     }
   }
 }

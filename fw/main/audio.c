@@ -142,7 +142,7 @@ void audio_task(void *_unused)
       if (wake_state == 0 && !can_sleep) {
         if (fetch_result->vad_state == AFE_VAD_SILENCE) {
           below_sleep_threshold_count++;
-          if (below_sleep_threshold_count >= 1 * 16000 / fetch_chunksize)
+          if (below_sleep_threshold_count >= (int)(1.5 * 16000) / fetch_chunksize)
             can_sleep = true;
         } else {
           below_sleep_threshold_count = 0;
