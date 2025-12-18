@@ -91,14 +91,13 @@ void led_init()
     }));
 
   // TODO: Move I2S-related setup elsewhere!
+  // TODO: Work around bit timing issue after reset
 if (0) {
-  // Work around bit timing issue after reset?
   gpio_set_direction(PIN_I2S_BCK, GPIO_MODE_DISABLE);
   gpio_set_direction(PIN_I2S_WS, GPIO_MODE_DISABLE);
   vTaskDelay(100 / portTICK_PERIOD_MS);
 }
 
-#if !PIN_I2S_IS_MASTER
   ESP_ERROR_CHECK(ledc_timer_config(&(ledc_timer_config_t){
     .speed_mode = LEDC_LOW_SPEED_MODE,
     .duty_resolution = LEDC_TIMER_4_BIT,
@@ -127,22 +126,6 @@ if (0) {
     .gpio_num = PIN_I2S_WS,
     .duty = 0b1000000000 - 2,
   }));
-  ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){
-    .speed_mode = LEDC_LOW_SPEED_MODE,
-    .channel = LEDC_CHANNEL_5,
-    .timer_sel = LEDC_TIMER_2,
-    .gpio_num = 10,
-    .duty = 16,
-  }));
-/*
-  ESP_ERROR_CHECK(ledc_channel_config(&(ledc_channel_config_t){
-    .speed_mode = LEDC_LOW_SPEED_MODE,
-    .channel = LEDC_CHANNEL_6,
-    .timer_sel = LEDC_TIMER_2,
-    .gpio_num = 11,
-    .duty = 0b10000000000,
-  }));
-*/
 
 void reset_timers()
 {
@@ -196,10 +179,6 @@ for (int i = 0; i < 6; i++) {
   uint32_t cnt_diff = (t2_cnt - t1_cnt + 16) % 16;
   REG_WRITE(LEDC_LSCH4_HPOINT_REG, (1024 + (-2 - cnt_diff)) % 1024);
   REG_SET_BIT(LEDC_LSCH4_CONF0_REG, LEDC_PARA_UP_LSCH4);
-  REG_WRITE(LEDC_LSCH5_HPOINT_REG, (512 + (20 - cnt_diff)));
-  REG_SET_BIT(LEDC_LSCH5_CONF0_REG, LEDC_PARA_UP_LSCH5);
-  REG_WRITE(LEDC_LSCH6_HPOINT_REG, (1024 + (-48 - cnt_diff)) % 1024);
-  REG_SET_BIT(LEDC_LSCH6_CONF0_REG, LEDC_PARA_UP_LSCH6);
 
   portENABLE_INTERRUPTS();
   ESP_LOGI(TAG, "Timer 1 resol. %u, Timer 2 resol. %u",
@@ -214,44 +193,6 @@ for (int i = 0; i < 6; i++) {
 
   reset_timers();
 
-if (0) {
-  mcpwm_timer_handle_t tim0;
-  ESP_ERROR_CHECK(mcpwm_new_timer(&(mcpwm_timer_config_t){
-    .group_id = 0,
-    .clk_src = MCPWM_TIMER_CLK_SRC_PLL160M,
-    .resolution_hz = 160000000,
-    .count_mode = MCPWM_TIMER_COUNT_MODE_UP,
-    .period_ticks = 100,
-  }, &tim0));
-
-  mcpwm_cap_timer_handle_t tim1;
-  ESP_ERROR_CHECK(mcpwm_new_capture_timer(&(mcpwm_capture_timer_config_t){
-    .group_id = 0,
-    .clk_src = MCPWM_TIMER_CLK_SRC_PLL160M,
-  }, &tim1));
-
-  mcpwm_oper_handle_t op1;
-  ESP_ERROR_CHECK(mcpwm_new_operator(&(mcpwm_operator_config_t){
-    .group_id = 0,
-    .flags.update_gen_action_on_sync = 1,
-  }, &op1));
-  ESP_ERROR_CHECK(mcpwm_operator_connect_timer(op1, tim0));
-
-  mcpwm_cmpr_handle_t cmp1;
-  ESP_ERROR_CHECK(mcpwm_new_comparator(op1, &(mcpwm_comparator_config_t){
-    .flags.update_cmp_on_sync = 1,
-  }, &cmp1));
-
-  mcpwm_gen_handle_t gen1;
-  ESP_ERROR_CHECK(mcpwm_new_generator(op1, &(mcpwm_generator_config_t){
-    .gen_gpio_num = PIN_I2S_WS,
-  }, &gen1));
-
-  ESP_ERROR_CHECK(mcpwm_generator_set_action_on_compare_event(gen1,
-    MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, cmp1, MCPWM_GEN_ACTION_TOGGLE)));
-}
-#endif  // #if !PIN_I2S_IS_MASTER
-
   ESP_ERROR_CHECK(esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_ON));
   for (int i = 0; i < 3; i++) {
     ESP_ERROR_CHECK(gpio_sleep_sel_dis(channels[i].pin));
@@ -260,8 +201,6 @@ if (0) {
 
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(PIN_I2S_BCK));
   ESP_ERROR_CHECK(gpio_sleep_sel_dis(PIN_I2S_WS));
-  ESP_ERROR_CHECK(gpio_sleep_sel_dis(10));
-  // ESP_ERROR_CHECK(gpio_sleep_sel_dis(11));
 
   ESP_LOGI(TAG, "Initialised LED with PWM controller");
 #endif
