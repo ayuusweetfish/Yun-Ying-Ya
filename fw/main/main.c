@@ -284,7 +284,7 @@ if (0) {
 
   vTaskDelay(pdMS_TO_TICKS(100));
   for (int i = 0; i < 21; i++)
-    printf("debuga %2u %3u\n", (unsigned)i, (unsigned)((&ulp_debuga)[i]));
+    printf("debuga %2u %3u\n", (unsigned)i, (unsigned)(((uint32_t *)&ulp_debuga)[i]));
 
   while (0) {
     bool waken = xSemaphoreTake(sem_ulp, 0);
