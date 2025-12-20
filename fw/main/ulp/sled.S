@@ -1,56 +1,62 @@
-.p2align 2
-.option norvc
-.L25: nop
-.L20: nop
-.L15: nop
-.L10: nop
-.L05: nop
-      ret
+// asmsyntax=asm
 
-
-.p2align 2
-.option norvc
-.L24: nop
-.L19: nop
-.L14: nop
-.option rvc
-.L09: nop
-.option norvc
-.L06: nop
-.option rvc
-      ret
-
+// GNU assembler does not support conveniently interleaving
+// uncompressed and compressed instructions; custom macros to the rescue
+.macro C mnemonic, args:vararg
+  .option push
+  .option rvc
+  \mnemonic \args
+  .option pop
+.endm
+.macro F mnemonic, args:vararg
+  .option push
+  .option norvc
+  \mnemonic \args
+  .option pop
+.endm
 
 .p2align 2
-.option norvc
-.L23: nop
-.L18: nop
-.L13: nop
-.L08: nop
-.option rvc
-.L03: nop
-      ret
+.L25: F nop
+.L20: F nop
+.L15: F nop
+.L10: F nop
+.L05: F nop
+      F ret
 
 
 .p2align 2
-.option norvc
-.L22: nop
-.L17: nop
-.L12: nop
-.option rvc
-.L07: lw a0, 0(a0)  // Assumes a0 is a valid memory location
-      ret
+.L24: F nop
+.L19: F nop
+.L14: F nop
+.L09: C nop
+.L06: F nop
+      C ret
 
 
 .p2align 2
-.option norvc
-.L21: nop
-.L16: nop
-.option rvc
-.L11: nop
-      nop   // 8
-      nop   // 3
-      ret
+.L23: F nop
+.L18: F nop
+.L13: F nop
+.L08: F nop
+.L03: C nop
+      C ret
+
+
+.p2align 2
+.L22: F nop
+.L17: F nop
+.L12: F nop
+.L07: C lw a0, 0(a0)  // Assumes a0 is a valid memory location
+      C ret
+
+
+.p2align 2
+.L21: F nop
+.L16: F nop
+.L11: C nop
+      C nop   // 8
+      C nop   // 3
+      C ret
 
 
 .p2align 2
