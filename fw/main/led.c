@@ -138,13 +138,13 @@ void reset_timers()
   uint32_t cfg2_rst = cfg2 | LEDC_LSTIMER2_RST;
   uint32_t cfg1_rst_clr = cfg1 & ~LEDC_LSTIMER1_RST;
   uint32_t cfg2_rst_clr = cfg2 & ~LEDC_LSTIMER2_RST;
-  // WS needs to fall slightly before/in sync with BCK, not after, so reset timer 2 first
-/*
-  REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst);
-  REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst_clr);
-  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst);
-  REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst_clr);
-*/
+  /*
+    Equivalent to the following, but with finer timing control:
+      REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst);
+      REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst);
+      REG_WRITE(LEDC_LSTIMER2_CONF_REG, cfg2_rst_clr);
+      REG_WRITE(LEDC_LSTIMER1_CONF_REG, cfg1_rst_clr);
+  */
   asm volatile (
     "nop\n" "nop\n"
     "isync\n"
@@ -160,7 +160,7 @@ void reset_timers()
     : "memory"
   );
 
-for (int i = 0; i < 6; i++) {
+for (int i = 0; ; i++) {
   uint32_t t1_cnt, t2_cnt;
   asm volatile (
     "nop\n" "nop\n"
@@ -181,12 +181,14 @@ for (int i = 0; i < 6; i++) {
   REG_SET_BIT(LEDC_LSCH4_CONF0_REG, LEDC_PARA_UP_LSCH4);
 
   portENABLE_INTERRUPTS();
-  ESP_LOGI(TAG, "Timer 1 resol. %u, Timer 2 resol. %u",
+  if (0) ESP_LOGI(TAG, "Timer 1 resol. %u, Timer 2 resol. %u",
     (unsigned)REG_GET_FIELD(LEDC_LSTIMER1_CONF_REG, LEDC_LSTIMER1_DUTY_RES),
     (unsigned)REG_GET_FIELD(LEDC_LSTIMER2_CONF_REG, LEDC_LSTIMER2_DUTY_RES));
   ESP_LOGI(TAG, "Timer 1 CNT %u, Timer 2 CNT %u, diff = %u",
     (unsigned)t1_cnt, (unsigned)t2_cnt, (int)cnt_diff);
   portDISABLE_INTERRUPTS();
+
+  if (i >= 5 /* && cnt_diff == 1 */) break;
 }
   portENABLE_INTERRUPTS();
 }
