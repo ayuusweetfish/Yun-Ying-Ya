@@ -32,8 +32,6 @@ void app_main(void)
   led_init();
   led_set_state(LED_STATE_STARTUP, 500);
 
-  // while (1) vTaskDelay(pdMS_TO_TICKS(1000));
-
   // `esp_pm/include/esp_pm.h`: Type is no longer implementation-specific
   ESP_ERROR_CHECK(esp_pm_configure(&(esp_pm_config_t){
     .max_freq_mhz = 160,

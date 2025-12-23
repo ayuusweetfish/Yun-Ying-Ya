@@ -160,7 +160,12 @@ void reset_timers()
     : "memory"
   );
 
-for (int i = 0; ; i++) {
+  // Spin to ensure timer reset
+  while (REG_READ(LEDC_LSTIMER1_VALUE_REG) == 0) { }
+  while (REG_READ(LEDC_LSTIMER2_VALUE_REG) == 0) { }
+  uint32_t cnt_diff_min = 16;
+
+for (int i = 0; i < 6; i++) {
   uint32_t t1_cnt, t2_cnt;
   asm volatile (
     "nop\n" "nop\n"
@@ -177,20 +182,19 @@ for (int i = 0; ; i++) {
 
   t2_cnt %= 16;
   uint32_t cnt_diff = (t2_cnt - t1_cnt + 16) % 16;
-  REG_WRITE(LEDC_LSCH4_HPOINT_REG, (1024 + (-2 - cnt_diff)) % 1024);
-  REG_SET_BIT(LEDC_LSCH4_CONF0_REG, LEDC_PARA_UP_LSCH4);
+  if (i == 0 || (cnt_diff_min - cnt_diff + 16) % 16 < 8)
+    cnt_diff_min = cnt_diff;
 
   portENABLE_INTERRUPTS();
-  if (0) ESP_LOGI(TAG, "Timer 1 resol. %u, Timer 2 resol. %u",
-    (unsigned)REG_GET_FIELD(LEDC_LSTIMER1_CONF_REG, LEDC_LSTIMER1_DUTY_RES),
-    (unsigned)REG_GET_FIELD(LEDC_LSTIMER2_CONF_REG, LEDC_LSTIMER2_DUTY_RES));
   ESP_LOGI(TAG, "Timer 1 CNT %u, Timer 2 CNT %u, diff = %u",
     (unsigned)t1_cnt, (unsigned)t2_cnt, (int)cnt_diff);
   portDISABLE_INTERRUPTS();
-
-  if (i >= 5 /* && cnt_diff == 1 */) break;
 }
   portENABLE_INTERRUPTS();
+
+  ESP_LOGI(TAG, "Min diff = %u", cnt_diff_min);
+  REG_WRITE(LEDC_LSCH4_HPOINT_REG, (1024 + (-2 - cnt_diff_min)) % 1024);
+  REG_SET_BIT(LEDC_LSCH4_CONF0_REG, LEDC_PARA_UP_LSCH4);
 }
 
   reset_timers();
