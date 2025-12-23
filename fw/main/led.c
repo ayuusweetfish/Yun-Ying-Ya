@@ -168,7 +168,10 @@ void reset_timers()
   // Spin to ensure timer reset
   while (REG_READ(LEDC_LSTIMER1_VALUE_REG) == 0) { }
   while (REG_READ(LEDC_LSTIMER2_VALUE_REG) == 0) { }
-  uint32_t cnt_diff_min;
+
+  // Find the maximum difference for the same reason as above (desync)
+  // as this will be subtracted from WS's H-point and we prefer that WS rise/fall early
+  uint32_t cnt_diff_max;
 
   for (int i = 0; i < 8; i++) {
     uint32_t t1_cnt, t2_cnt;
@@ -187,8 +190,8 @@ void reset_timers()
 
     t2_cnt %= 16;
     uint32_t cnt_diff = (t2_cnt - t1_cnt + 16) % 16;
-    if (i == 0 || (cnt_diff_min - cnt_diff + 16) % 16 < 8)
-      cnt_diff_min = cnt_diff;
+    if (i == 0 || (cnt_diff - cnt_diff_max + 16) % 16 < 8)
+      cnt_diff_max = cnt_diff;
 
     portENABLE_INTERRUPTS();
     ESP_LOGI(TAG, "Timer 1 CNT %u, Timer 2 CNT %u, diff = %u",
@@ -197,8 +200,8 @@ void reset_timers()
   }
 
   portENABLE_INTERRUPTS();
-  ESP_LOGI(TAG, "Min diff = %u", (unsigned)cnt_diff_min);
-  REG_WRITE(LEDC_LSCH4_HPOINT_REG, (1024 + (-2 - cnt_diff_min)) % 1024);
+  ESP_LOGI(TAG, "Max diff = %u", (unsigned)cnt_diff_max);
+  REG_WRITE(LEDC_LSCH4_HPOINT_REG, (1024 + (-2 - cnt_diff_max)) % 1024);
   REG_SET_BIT(LEDC_LSCH4_CONF0_REG, LEDC_PARA_UP_LSCH4);
 }
 
