@@ -124,7 +124,7 @@ if (0) {
     .channel = LEDC_CHANNEL_4,
     .timer_sel = LEDC_TIMER_2,
     .gpio_num = PIN_I2S_WS,
-    .duty = 0b1000000000 - 2,
+    .duty = 0b1000000000,
   }));
 
 void reset_timers()

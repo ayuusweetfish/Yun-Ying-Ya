@@ -465,7 +465,7 @@ int main()
   uint32_t offs = check_edges();
 
   uint32_t t = ULP_RISCV_GET_CCOUNT();
-  next_edge = t - t % 1250 + 1250 * 4000 + offs - 36;
+  next_edge = t - t % 1250 + 1250 * 4000 + offs - 38;
 
   uint32_t block = 0;
   int successive = 0;
