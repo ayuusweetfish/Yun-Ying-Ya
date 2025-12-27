@@ -28,7 +28,11 @@ local load_duck = function (s)
   return prog
 end
 
-local prog_str = io.popen('pbpaste'):read('a')
+local clipboard =
+  love.system.getOS() == 'OS X' and 'pbpaste' or
+  love.system.getOS() == 'Windows' and 'powershell -command "Get-Clipboard"' or
+  'wl-paste'
+local prog_str = io.popen(clipboard):read('a')
 local prog_str_matched = prog_str:match('```.-\n(.+)\n```')
 if prog_str_matched then prog_str = prog_str_matched end
 local prog = load_duck(prog_str)
