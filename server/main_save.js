@@ -4,7 +4,7 @@ import { audioPacketStreamDecoder } from './packet_decode.js'
 const serveReq = async (req) => {
   const url = new URL(req.url)
   const fileName = `/tmp/record_${Date.now()}.bin`
-  if (req.method === 'POST' && url.pathname === '/') {
+  if (req.method === 'POST' && url.pathname === '/raw') {
     console.log('Incoming! (Raw)')
     try {
       const f = await Deno.open(fileName, { write: true, create: true, truncate: true })
@@ -15,8 +15,8 @@ const serveReq = async (req) => {
     } // No need for `finally` block, as `pipeTo()` closes the streams
     console.log('Ok!', fileName)
     return new Response('Ok')
-  } else if (req.method === 'POST' && url.pathname === '/decode') {
-    console.log('Incoming! (Decode)')
+  } else if (req.method === 'POST' && url.pathname === '/') {
+    console.log('Incoming! (Opus)')
     try {
       const sr = (Deno.env.get('SR') === '1' ? await speechRecognition() : null)
       const f = await Deno.open(fileName, { write: true, create: true, truncate: true })
@@ -42,6 +42,6 @@ const serverPort = +Deno.env.get('SERVEPORT') || 24678
 const server = Deno.serve({ port: serverPort }, serveReq)
 
 // bash run.sh.example main_save.js --allow-write=/tmp
-// cat 聆小璐.pcm | curl http://127.0.0.1:24678 -H 'Transfer-Encoding: chunked' --data-binary @-
-// cat 聆小璐.opus | curl http://127.0.0.1:24678/decode -H 'Transfer-Encoding: chunked' --data-binary @-
+// cat <name>.pcm | curl http://127.0.0.1:24678/raw -H 'Transfer-Encoding: chunked' --data-binary @-
+// cat <name>.opus | curl http://127.0.0.1:24678/ -H 'Transfer-Encoding: chunked' --data-binary @-
 // ffmpeg -ar 16000 -f s16le -acodec pcm_s16le -i record_<timestamp>.bin record_<timestamp>.wav
