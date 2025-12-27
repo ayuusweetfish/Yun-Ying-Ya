@@ -3,9 +3,9 @@ import { audioPacketStreamDecoder } from './packet_decode.js'
 
 const serveReq = async (req) => {
   const url = new URL(req.url)
+  const fileName = `/tmp/record_${Date.now()}.bin`
   if (req.method === 'POST' && url.pathname === '/') {
-    console.log('Incoming!')
-    const fileName = `record_${Date.now()}.bin`
+    console.log('Incoming! (Raw)')
     try {
       const f = await Deno.open(fileName, { write: true, create: true, truncate: true })
       await req.body.pipeTo(f.writable)
@@ -16,20 +16,19 @@ const serveReq = async (req) => {
     console.log('Ok!', fileName)
     return new Response('Ok')
   } else if (req.method === 'POST' && url.pathname === '/decode') {
-    console.log('Incoming! (Decoded)')
-    const fileName = `record_${Date.now()}.bin`
+    console.log('Incoming! (Decode)')
     try {
-      const sr = await speechRecognition()
+      const sr = (Deno.env.get('SR') === '1' ? await speechRecognition() : null)
       const f = await Deno.open(fileName, { write: true, create: true, truncate: true })
       const [b1, b2] = req.body.pipeThrough(audioPacketStreamDecoder()).tee()
       await Promise.all([
         (async () => await b1.pipeTo(f.writable))(),
         (async () => {
-          for await (const value of b2) sr.push(value)
+          for await (const value of b2) if (sr) sr.push(value)
         })(),
       ])
       console.log('Ok!', fileName)
-      const s = await sr.end()
+      const s = (sr ? await sr.end() : '(speech recognition off)')
       return new Response(fileName + '\n' + s)
     } catch (e) {
       console.log(`Internal server error: ${e} ${e.stack}`)

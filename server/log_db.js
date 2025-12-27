@@ -1,6 +1,6 @@
-import { Database } from 'jsr:@db/sqlite@0.12'
+import { DatabaseSync } from 'node:sqlite'
 
-const db = new Database('log.db')
+const db = new DatabaseSync('log.db')
 
 db.prepare(`
   CREATE TABLE IF NOT EXISTS interactions (
