@@ -1,6 +1,7 @@
 API_KEY_ALIYUN=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
 API_KEY_01AI=00000000000000000000000000000000 \
 API_KEY_GOOGLE=AIxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
+API_KEY_DEEPSEEK=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
 DEBUG=1 \
 deno run --allow-net --allow-read --allow-env --allow-write=log.db ${2:-} \
 ${1:-main.js}

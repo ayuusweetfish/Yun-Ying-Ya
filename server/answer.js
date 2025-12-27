@@ -9,7 +9,7 @@ const loggedFetchJSON = async (url, options) => {
   return JSON.parse(respText)
 }
 
-const requestLLM_OpenAI = (endpoint, model, temperature, key) => async (messages) => {
+const requestLLM_OpenAI = (endpoint, model, temperature, maxTokens, key) => async (messages) => {
   const resp = await loggedFetchJSON(
     endpoint,
     {
@@ -21,7 +21,7 @@ const requestLLM_OpenAI = (endpoint, model, temperature, key) => async (messages
       body: JSON.stringify({
         model: model,
         messages,
-        max_tokens: 5000,
+        max_tokens: maxTokens,
         temperature: temperature,
       }),
     }
@@ -82,12 +82,24 @@ const requestLLM_Google = (model, temperature, key) => async (messages) => {
 }
 
 const requestLLM_YiLightning = requestLLM_OpenAI(
-  'https://api.lingyiwanwu.com/v1/chat/completions', 'yi-lightning', 1.2,
+  'https://api.lingyiwanwu.com/v1/chat/completions',
+  'yi-lightning', 1.2, 5000,
   Deno.env.get('API_KEY_01AI') || prompt('API key (01.AI):')
 )
 const requestLLM_DeepSeek3 = requestLLM_OpenAI(
-  'https://api.deepseek.com/chat/completions', 'deepseek-chat', 1.5,
+  'https://api.deepseek.com/chat/completions',
+  'deepseek-chat', 1.5, 5000,
   Deno.env.get('API_KEY_DEEPSEEK') || prompt('API key (DeepSeek):')
+)
+const requestLLM_QwenMax = requestLLM_OpenAI(
+  'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+  'qwen-max', 1.8, 1024 /* Max: 65536 */,
+  Deno.env.get('API_KEY_ALIYUN') || prompt('API key (Aliyun Bailian):')
+)
+const requestLLM_QwenPlus = requestLLM_OpenAI(
+  'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+  'qwen-plus-2025-12-01', 1.8, 1024 /* Max: 32768 */,
+  Deno.env.get('API_KEY_ALIYUN') || prompt('API key (Aliyun Bailian):')
 )
 const requestLLM_Gemini15Flash = requestLLM_Google(
   'gemini-1.5-flash', 0.8,
@@ -105,7 +117,7 @@ export const answerDescription = async (pedestrianMessage) => {
 请你展开想象，描述小鸭的回应。可以采用各类变化效果（如渐变、呼吸、闪烁等等，以及不同的动画节奏，甚至速度变化），但请让动画尽量简洁，使行人可以直观地明白其中的含义，不要使用过多的动画段落。可以将颜色赋予文学性，但不必展开过多的描写，请更多关注小灯本身，用颜色与动画展现你的想象。请注意小灯发出的光不能制造深色效果，请以亮度明暗或色调纯度来表达；另外，不必在开头加入包括象征小鸭“思考”或“苏醒”的动画段落。**只回应本次对话即可，不用续写。**
   `.trim()
 
-  const [lightResp, lightDescription] = await requestLLM_DeepSeek3([
+  const [lightResp, lightDescription] = await requestLLM_QwenMax([
   /*
     { role: 'system', content: systemPrompt },
     { role: 'user', content: pedestrianMessage },
@@ -150,5 +162,6 @@ export const answerProgram = async (lightDescription) => {
 // ======== Test run ======== //
 if (import.meta.main) {
   // console.log(await answerProgram(await answerDescription('小鸭小鸭，唱首歌吧！')))
-  console.log(await answerProgram(await answerDescription('小鸭小鸭，星星是什么样子的？')))
+  // console.log(await answerProgram(await answerDescription('小鸭小鸭，星星是什么样子的？')))
+  console.log(await answerDescription('小鸭小鸭，星星是什么样子的？'))
 }
