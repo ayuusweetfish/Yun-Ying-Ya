@@ -10,18 +10,26 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
       },
     })
 
+  const taskId = crypto.randomUUID()
+
   let ret
   let creationPromiseDone = false
   let creationTimeoutTimer
 
+  let recognitionResult = ''
+
   let expectedClose = false
+  let remoteEarlyFinish = false
+
+  let endPromiseResolve
+  let endPromiseTimer
 
   ws.onopen = (ev) => {
     console.log('open')
     ws.send(JSON.stringify({
       header: {
         action: 'run-task',
-        task_id: crypto.randomUUID(),
+        task_id: taskId,
         streaming: 'duplex',
       },
       payload: {
@@ -57,11 +65,27 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
   ws.onmessage = (ev) => {
     try {
       const o = JSON.parse(ev.data)
-      console.log('data', Deno.inspect(o, { depth: 99 }))
-      if (o.header && o.header.event === 'task-started' && !creationPromiseDone) {
+      // console.log('data', Deno.inspect(o, { depth: 99 }))
+      if (!o.header) return   // Malformed
+      if (o.header.event === 'task-started' && !creationPromiseDone) {
         resolve(ret)
         creationPromiseDone = true
         clearTimeout(creationTimeoutTimer)
+      } else if (o.header.event === 'result-generated') {
+        recognitionResult = o.payload.output.transcription.text
+        if (o.payload.output.transcription.sentence_end) {
+          if (endPromiseResolve) {
+            clearTimeout(endPromiseTimer)
+            endPromiseResolve(recognitionResult)
+          } else {
+            remoteEarlyFinish = true
+          }
+        }
+      } else if (o.header.event === 'task-failed') {
+        ws.onerror({ message: `Server signalled task failure (${o.header.error_message})` })
+      } else if (o.header.event === 'task-finished') {
+        expectedClose = true
+        ws.close()
       }
     } catch (e) {
       console.log(e.message)
@@ -70,13 +94,50 @@ export const speechRecognition = () => new Promise((resolve, reject) => {
   }
 
   creationTimeoutTimer = setTimeout(
-    () => ws.onerror({ message: 'Start-up imeout' }), 5000)
+    () => ws.onerror({ message: 'Start-up timeout' }), 5000)
 
+  const sendAudio = (pcm) => {
+    if (remoteEarlyFinish) return
+    ws.send(pcm)
+  }
+
+  const FRAME = 4096
+  let residue = Buffer.alloc(0)
   const push = (pcm) => {
+    // XXX: Maybe avoid allocations
+    const buf = Buffer.concat([residue, pcm])
+    const sendLen = buf.length - buf.length % FRAME
+    residue = Buffer.alloc(buf.length % FRAME)
+    // residue[:] = buf[sendLen:]
+    buf.copy(residue, 0, sendLen)
+    sendAudio(buf.slice(0, sendLen))
   }
 
   const end = () => new Promise((resolve, reject) => {
-    resolve('TODO.')
+    ws.send(JSON.stringify({
+      header: {
+        action: 'finish-task',
+        task_id: taskId,
+        streaming: 'duplex',
+      },
+      payload: {
+        input: {},
+      },
+    }))
+    if (remoteEarlyFinish) {
+      resolve(recognitionResult)
+    } else {
+      endPromiseResolve = resolve
+      endPromiseTimer = setTimeout(() => {
+        if (endPromiseTimer !== null) {
+          endPromiseResolve = null
+          expectedClose = true
+          ws.close()
+          reject(new Error('Server did not return valid recognition results in time'))
+        }
+      }, 5000)
+      if (residue.length > 0) sendAudio(residue)
+    }
   })
 
   ret = {

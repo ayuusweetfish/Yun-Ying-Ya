@@ -27,8 +27,8 @@ const serveReq = async (req) => {
           for await (const value of b2) if (sr) sr.push(value)
         })(),
       ])
-      console.log('Ok!', fileName)
       const s = (sr ? await sr.end() : '(speech recognition off)')
+      console.log('Ok!', fileName, s)
       return new Response(fileName + '\n' + s)
     } catch (e) {
       console.log(`Internal server error: ${e} ${e.stack}`)
