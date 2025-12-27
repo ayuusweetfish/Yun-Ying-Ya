@@ -41,5 +41,7 @@ const serveReq = async (req) => {
 const serverPort = +Deno.env.get('SERVEPORT') || 24678
 const server = Deno.serve({ port: serverPort }, serveReq)
 
-// gzip < 聆小璐.pcm | curl http://127.0.0.1:24678 -H 'Transfer-Encoding: chunked' --data-binary @-
-// ffmpeg -ar 16000 -f s16le -acodec pcm_s16le -i record_1732799532755.bin record_1732799532755.wav
+// bash run.sh.example main_save.js --allow-write=/tmp
+// cat 聆小璐.pcm | curl http://127.0.0.1:24678 -H 'Transfer-Encoding: chunked' --data-binary @-
+// cat 聆小璐.opus | curl http://127.0.0.1:24678/decode -H 'Transfer-Encoding: chunked' --data-binary @-
+// ffmpeg -ar 16000 -f s16le -acodec pcm_s16le -i record_<timestamp>.bin record_<timestamp>.wav
