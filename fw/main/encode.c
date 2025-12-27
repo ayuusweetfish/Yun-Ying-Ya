@@ -19,6 +19,7 @@ static void encode_task(void *_unused);
 
 static TaskHandle_t encode_task_handle;
 static SemaphoreHandle_t buffer_mutex;
+static SemaphoreHandle_t encode_wakeup;
 
 void encode_init()
 {
@@ -33,6 +34,7 @@ void encode_init()
   out_buf = heap_caps_malloc(OUT_BUF_SIZE * sizeof(uint8_t), MALLOC_CAP_SPIRAM);
 
   buffer_mutex = xSemaphoreCreateMutex(); assert(buffer_mutex != NULL);
+  encode_wakeup = xSemaphoreCreateBinary(); assert(encode_wakeup != NULL);
 
   BaseType_t result = xTaskCreate(encode_task, "encode_task", 40 * 1024, NULL, 0, &encode_task_handle);
   if (result == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY)
@@ -60,10 +62,8 @@ void encode_push(const int16_t *buf, size_t end)
   in_buf = buf;
   in_buf_end = end;
   xSemaphoreGive(buffer_mutex);
+  xSemaphoreGive(encode_wakeup);
   ESP_LOGI(TAG, "Push (%lu)", in_buf_end);
-  // FIXME: Very unreliable workaround! Ensure the encoding task correctly goes to sleep
-  vTaskDelay(2);
-  vTaskResume(encode_task_handle);
 }
 
 size_t encode_pull()
@@ -81,6 +81,7 @@ void encode_wait_end()
     unsigned is_ended = (in_buf_last + 160 >= in_buf_end);
     xSemaphoreGive(buffer_mutex);
     if (is_ended) break;
+    vTaskDelay(10);
   }
 }
 
@@ -92,7 +93,7 @@ const uint8_t *encode_buffer()
 static void encode_task(void *_unused)
 {
   while (1) {
-    vTaskSuspend(NULL); // Suspend self
+    xSemaphoreTake(encode_wakeup, portMAX_DELAY);
     xSemaphoreTake(buffer_mutex, portMAX_DELAY);
     int frame_count = 0;
     while (in_buf_last + 160 < in_buf_end) {
