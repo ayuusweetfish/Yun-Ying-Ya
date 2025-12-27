@@ -28,6 +28,8 @@ void encode_init()
     ESP_LOGE(TAG, "Failed to create encoder: %s\n", opus_strerror(err));
     return;
   }
+  opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(3));
+
   out_buf = heap_caps_malloc(OUT_BUF_SIZE * sizeof(uint8_t), MALLOC_CAP_SPIRAM);
 
   buffer_mutex = xSemaphoreCreateMutex(); assert(buffer_mutex != NULL);
