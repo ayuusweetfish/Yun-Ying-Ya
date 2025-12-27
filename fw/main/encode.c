@@ -58,6 +58,9 @@ void encode_push(const int16_t *buf, size_t end)
   in_buf = buf;
   in_buf_end = end;
   xSemaphoreGive(buffer_mutex);
+  ESP_LOGI(TAG, "Push (%lu)", in_buf_end);
+  // FIXME: Very unreliable workaround! Ensure the encoding task correctly goes to sleep
+  vTaskDelay(2);
   vTaskResume(encode_task_handle);
 }
 
@@ -71,8 +74,12 @@ size_t encode_pull()
 
 void encode_wait_end()
 {
-  xSemaphoreTake(buffer_mutex, portMAX_DELAY);
-  xSemaphoreGive(buffer_mutex);
+  while (1) {
+    xSemaphoreTake(buffer_mutex, portMAX_DELAY);
+    unsigned is_ended = (in_buf_last + 160 >= in_buf_end);
+    xSemaphoreGive(buffer_mutex);
+    if (is_ended) break;
+  }
 }
 
 const uint8_t *encode_buffer()
@@ -85,6 +92,7 @@ static void encode_task(void *_unused)
   while (1) {
     vTaskSuspend(NULL); // Suspend self
     xSemaphoreTake(buffer_mutex, portMAX_DELAY);
+    int frame_count = 0;
     while (in_buf_last + 160 < in_buf_end) {
       uint32_t frame_size;
       if (in_buf_end - in_buf_last >= 960) frame_size = 960;
@@ -111,6 +119,11 @@ static void encode_task(void *_unused)
         }
       }
       in_buf_last += frame_size;
+      if (++frame_count == 8) {
+        ESP_LOGI(TAG, "Yield (%lu, %lu)", in_buf_last, in_buf_end);
+        frame_count = 0;
+        vTaskDelay(1);
+      }
     }
     xSemaphoreGive(buffer_mutex);
   }
