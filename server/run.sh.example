@@ -1,5 +1,4 @@
-API_KEY_IFLYTEK_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
-API_KEY_IFLYTEK_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
+API_KEY_ALIYUN=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
 API_KEY_01AI=00000000000000000000000000000000 \
 API_KEY_GOOGLE=AIxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
 DEBUG=1 \
