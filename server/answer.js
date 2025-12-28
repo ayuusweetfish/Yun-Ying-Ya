@@ -101,6 +101,11 @@ const requestLLM_QwenPlus = requestLLM_OpenAI(
   'qwen-plus-2025-12-01', 1.8, 1024 /* Max: 32768 */,
   Deno.env.get('API_KEY_ALIYUN') || prompt('API key (Aliyun Bailian):')
 )
+const requestLLM_QwenCoder = requestLLM_OpenAI(
+  'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+  'qwen3-coder-plus-2025-09-23', 1.0, 4096 /* Max: 65536 */,
+  Deno.env.get('API_KEY_ALIYUN') || prompt('API key (Aliyun Bailian):')
+)
 const requestLLM_Gemini15Flash = requestLLM_Google(
   'gemini-1.5-flash', 0.8,
   Deno.env.get('API_KEY_GOOGLE') || prompt('API key (Google):')
@@ -129,7 +134,7 @@ export const answerDescription = async (pedestrianMessage) => {
 }
 
 export const answerProgram = async (lightDescription) => {
-  const [programResp, programFullText] = await requestLLM_Gemini20FlashExp([
+  const [programResp, programFullText] = await requestLLM_QwenCoder([
     { role: 'system', content: `
 请你按照给出的描述为一盏小灯编写动画效果。
 
@@ -151,7 +156,7 @@ export const answerProgram = async (lightDescription) => {
 
   const codeSegments = [
     ...
-    programFullText.matchAll(/(?<=^|\n)```[^\n]*\n(.*?)(?:(?<=\n)```(?=\s*\n)|$)/gs)
+    programFullText.matchAll(/(?<=^|\n)```[^\n]*\n(.*?)(?:(?<=\n)```(?=\s*(?:\n|$))|$)/gs)
       .map(([_, code]) => code)
     // We early stop at code block terminations, so accept unclosed blocks in the response
   ]
@@ -162,6 +167,5 @@ export const answerProgram = async (lightDescription) => {
 // ======== Test run ======== //
 if (import.meta.main) {
   // console.log(await answerProgram(await answerDescription('小鸭小鸭，唱首歌吧！')))
-  // console.log(await answerProgram(await answerDescription('小鸭小鸭，星星是什么样子的？')))
-  console.log(await answerDescription('小鸭小鸭，星星是什么样子的？'))
+  console.log(await answerProgram(await answerDescription('小鸭小鸭，星星是什么样子的？')))
 }
