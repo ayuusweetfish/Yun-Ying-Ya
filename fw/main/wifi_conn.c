@@ -147,8 +147,8 @@ void wifi_init_sta(void)
       .password = "",
     #else
       .password = EXAMPLE_ESP_WIFI_PASS,
-      .sae_pwe_h2e = ESP_WIFI_SAE_MODE,
-      .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
+      // .sae_pwe_h2e = ESP_WIFI_SAE_MODE,
+      // .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
     #endif
 
       .listen_interval = 10,
