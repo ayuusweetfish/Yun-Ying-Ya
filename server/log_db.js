@@ -1,7 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 
 const db = new DatabaseSync('log.db')
-globalThis['log_db.db'] = db  // Prevent garbage collection closing connection
 
 db.prepare(`
   CREATE TABLE IF NOT EXISTS interactions (
@@ -26,6 +25,7 @@ db.prepare(`
 const stmtLogNetwork = db.prepare(`
   INSERT INTO network VALUES (?, ?, ?, ?)
 `)
+stmtLogNetwork.db = db  // Prevent garbage collection closing connection
 export const logNetwork = async (url, payload, response, time) => {
   stmtLogNetwork.run(url, payload, response, time)
 }
