@@ -8,7 +8,7 @@ local delay, fade, blink, breath = (function ()
 
   local local_line = function (t, ...)
     T = T + t
-    if T > MAX_T then error('Total duration too long') end
+    if T > MAX_T then error('Total duration too long', 0) end
     local s = string.format('%d', math.max(1, round(t)))
     for i = 1, select('#', ...) do
       local a = select(i, ...)
@@ -19,8 +19,8 @@ local delay, fade, blink, breath = (function ()
 
   local function assert_range(x, min, max)
     x = tonumber(x)
-    if x == nil then error('Cannot parse numeric argument') end
-    if x < min or x > max then error('Numeric argument out of expected range') end
+    if x == nil then error('Cannot parse numeric argument', 0) end
+    if x < min or x > max then error('Numeric argument out of expected range', 0) end
     return x
   end
   local function assert_range_clamped(x, min, max, tolerance)

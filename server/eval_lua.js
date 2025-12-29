@@ -30,7 +30,7 @@ export const evalProgram = async (program) => {
   lua.lua_setglobal(L, to_luastring('print'))
 
   const fullSource =
-    `debug.sethook(function (ev) error('Lua timeout') end, '', 1e6)\ndebug = nil\n`
+    `debug.sethook(function (ev) error('Lua timeout', 0) end, '', 1e6)\ndebug = nil\n`
     + systemFunctions + '\n' + program
   const status = lauxlib.luaL_dostring(L, to_luastring(fullSource))
 
