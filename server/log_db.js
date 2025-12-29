@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 
 const db = new DatabaseSync('log.db')
+globalThis['log_db.db'] = db  // Prevent garbage collection closing connection
 
 db.prepare(`
   CREATE TABLE IF NOT EXISTS interactions (
