@@ -1,5 +1,4 @@
-import { LuaFactory } from 'npm:wasmoon@1.16.0'
-const luaFactory = new LuaFactory()
+import { lua, lauxlib, lualib, to_luastring, to_jsstring } from 'npm:fengari@0.1.5'
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x))
 
@@ -11,29 +10,36 @@ const checkNum = (...nums) => {
 const systemFunctions = await Deno.readTextFile('sys.lua')
 
 export const evalProgram = async (program) => {
-  const l = await luaFactory.createEngine()
+  const L = lauxlib.luaL_newstate()
+  lauxlib.luaL_requiref(L, to_luastring('_G'), lualib.luaopen_base, 1)
+  lauxlib.luaL_requiref(L, to_luastring('debug'), lualib.luaopen_debug, 1)
+  lauxlib.luaL_requiref(L, to_luastring('math'), lualib.luaopen_math, 1)
+  lauxlib.luaL_requiref(L, to_luastring('string'), lualib.luaopen_string, 1)
+  lauxlib.luaL_requiref(L, to_luastring('table'), lualib.luaopen_table, 1)
 
-  const s = []
-  let T = 0
-  let [R, G, B] = [0, 0, 0]
+  const output = []
 
-  try {
-    l.global.set('line', (line) => s.push(line + '\n'))
-    // `wasmoon` does not provide toggles for individual libraries, so we remove them here
-    l.global.set('print', () => {})
-    l.global.set('io', undefined) // `wasmoon` accepts `undefined` instead of `null`
-    l.global.set('os', undefined)
+  lua.lua_pushjsfunction(L, (L) => {
+    const line = to_jsstring(lua.lua_tostring(L, 1))
+    output.push(line + '\n')
+    return 0
+  })
+  lua.lua_setglobal(L, to_luastring('line'))
 
-    await l.doString(
-      `debug.sethook(function (ev) error('Lua timeout') end, '', 1e6)\n`
-      + systemFunctions + program)
-  } catch (e) {
-    throw e
-  } finally {
-    l.global.close()
+  lua.lua_pushnil(L)
+  lua.lua_setglobal(L, to_luastring('print'))
+
+  const fullSource =
+    `debug.sethook(function (ev) error('Lua timeout') end, '', 1e6)\ndebug = nil\n`
+    + systemFunctions + '\n' + program
+  const status = lauxlib.luaL_dostring(L, to_luastring(fullSource))
+
+  if (status !== lua.LUA_OK) {
+    const err = to_jsstring(lua.lua_tostring(L, -1))
+    throw new Error('Lua: ' + err)
   }
 
-  return s.join('')
+  return output.join('')
 }
 
 // ======== Test run ======== //
