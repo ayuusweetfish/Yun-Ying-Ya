@@ -28,6 +28,11 @@ local delay, fade, blink, breath = (function ()
     if x < min then x = min elseif x > max then x = max end
     return x
   end
+  local function clamp(x, min, max)
+    if x < min then return min
+    elseif x > max then return max
+    else return x end
+  end
   local function tint(r, g, b)
     return string.format('%d %d %d', round(r * 1000), round(g * 1000), round(b * 1000))
   end
@@ -45,10 +50,32 @@ local delay, fade, blink, breath = (function ()
     R, G, B = r, g, b
   end
 
+  -- Workaround for LLM's overlooks
+  -- We would like blink/breath colours to be contrastive enough
+  local function enhance_contrast(r, g, b, R, G, B)
+    local dr, dg, db = r - R, g - G, b - B
+    local d_max = math.max(math.abs(dr), math.abs(dg), math.abs(db))
+    if d_max < 0.3 then
+      if d_max < 1e-4 then
+        local scale = (math.max(r, g, b) < 0.5 and 1.5 or 0.25)
+        r = R * scale
+        g = G * scale
+        b = B * scale
+      else
+        local scale = 0.3 / d_max
+        r = clamp(R + dr * scale, 0, 1)
+        g = clamp(G + dg * scale, 0, 1)
+        b = clamp(B + db * scale, 0, 1)
+      end
+    end
+    return r, g, b
+  end
+
   local function blink(r, g, b, n, t1, t2)
     r = assert_range_clamped(r, 0, 1, 0.2)
     g = assert_range_clamped(g, 0, 1, 0.2)
     b = assert_range_clamped(b, 0, 1, 0.2)
+    r, g, b = enhance_contrast(r, g, b, R, G, B)
     n = assert_range(n, 1, MAX_T)
     t1 = assert_range(t1, 10, MAX_T)
     t2 = assert_range(t2, 10, MAX_T)
@@ -65,6 +92,7 @@ local delay, fade, blink, breath = (function ()
     r = assert_range_clamped(r, 0, 1, 0.2)
     g = assert_range_clamped(g, 0, 1, 0.2)
     b = assert_range_clamped(b, 0, 1, 0.2)
+    r, g, b = enhance_contrast(r, g, b, R, G, B)
     n = assert_range(n, 1, MAX_T)
     t = assert_range(t, 10, MAX_T)
     for _ = 1, n do
