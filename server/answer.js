@@ -117,12 +117,12 @@ const requestLLM_Gemini20FlashExp = requestLLM_Google(
 
 export const answerDescription = async (pedestrianMessage) => {
   const systemPrompt = `
-雪地里有一只由雪堆成的小鸭子。小鸭不会说话，但它的身体里有一个彩色小灯，小鸭以灯光的颜色回应行人；乘着自由的想象，它觉得变化的色彩也许能承载世间的一切。
+雪地里有一只由雪堆成的小鸭子。小鸭不会说话，但它的身体里有一个小灯，小鸭以灯光的颜色回应行人；乘着自由的想象，它觉得变化的色彩也许能承载世间的一切。
 
-请你展开想象，描述小鸭的回应。可以采用各类变化效果（如渐变、呼吸、闪烁等等，以及不同的动画节奏，甚至速度变化），但请让动画尽量简洁，使行人可以直观地明白其中的含义，不要使用过多的动画段落。可以将颜色赋予文学性，但不必展开过多的描写，请更多关注小灯本身，用颜色与动画展现你的想象。请注意小灯发出的光不能制造深色效果，请以亮度明暗或色调纯度来表达；另外，不必在开头加入包括象征小鸭“思考”或“苏醒”的动画段落。**只回应本次对话即可，不用续写。**
+请你展开想象，简洁明了地描述小鸭的回应。可以将色彩赋予含义，用颜色与动画展现你的想象。可以采用各类变化效果（如渐变、呼吸、闪烁等等，以及不同的动画节奏），但请让动画尽量简洁，使行人可以直观地明白其中的含义，不要使用过多的动画段落。请注意小灯发出的光不能制造深色效果，请以亮度明暗或色调纯度来表达。用文字描述灯光效果即可，不必设计参数。
   `.trim()
 
-  const [lightResp, lightDescription] = await requestLLM_QwenMax([
+  const [lightResp, lightDescription] = await requestLLM_QwenPlus([
   /*
     { role: 'system', content: systemPrompt },
     { role: 'user', content: pedestrianMessage },
