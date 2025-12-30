@@ -77,8 +77,8 @@ local delay, fade, blink, breath = (function ()
     b = assert_range_clamped(b, 0, 1, 0.2)
     r, g, b = enhance_contrast(r, g, b, R, G, B)
     n = assert_range(n, 1, MAX_T)
-    t1 = assert_range(t1, 10, MAX_T)
-    t2 = assert_range(t2, 10, MAX_T)
+    t1 = assert_range_clamped(t1, 250, MAX_T, 250)
+    t2 = assert_range_clamped(t2, 250, MAX_T, 250)
     local ramp = math.min(t1, t2) * 0.5
     for _ = 1, n do
       local_line(ramp, 'F', tint(r, g, b))
@@ -94,7 +94,7 @@ local delay, fade, blink, breath = (function ()
     b = assert_range_clamped(b, 0, 1, 0.2)
     r, g, b = enhance_contrast(r, g, b, R, G, B)
     n = assert_range(n, 1, MAX_T)
-    t = assert_range(t, 10, MAX_T)
+    t = assert_range_clamped(t, 300, MAX_T, 300)
     for _ = 1, n do
       local_line(t, 'B', tint(r, g, b))
     end

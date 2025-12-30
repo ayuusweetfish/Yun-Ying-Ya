@@ -101,6 +101,11 @@ const requestLLM_QwenPlus = requestLLM_OpenAI(
   'qwen-plus', 1.0 /* [0, 2) */, 1024 /* Max: 32768 */,
   Deno.env.get('API_KEY_ALIYUN') || prompt('API key (Aliyun Bailian):')
 )
+const requestLLM_QwenFlash = requestLLM_OpenAI(
+  'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+  'qwen-flash', 1.0 /* [0, 2) */, 1024 /* Max: 32768 */,
+  Deno.env.get('API_KEY_ALIYUN') || prompt('API key (Aliyun Bailian):')
+)
 const requestLLM_QwenCoder = requestLLM_OpenAI(
   'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
   'qwen3-coder', 1.0, 4096 /* Max: 65536 */,
@@ -127,7 +132,7 @@ export const answerDescription = async (pedestrianMessage) => {
 请你展开想象，简洁明了地描述小鸭的回应。可以将色彩赋予含义，用颜色与动画展现你的想象。可以采用各类变化效果（如渐变、呼吸、闪烁等等，以及不同的动画节奏），自由展开联想、避免单一，运用至少两种颜色，但请保持简洁，使行人可以直观地明白其中的含义。请注意小灯发出的光不能制造深色效果，请以亮度明暗或色调纯度来表达。用文字描述灯光效果即可，不必设计参数。
   `.trim()
 
-  const [lightResp, lightDescription] = await requestLLM_QwenPlus([
+  const [lightResp, lightDescription] = await requestLLM_QwenFlash([
   /*
     { role: 'system', content: systemPrompt },
     { role: 'user', content: pedestrianMessage },
@@ -145,7 +150,7 @@ export const answerProgram = async (lightDescription) => {
 
 程序以 Lua 语言编写，你可以调用以下系统提供的函数，不要使用 \`os\` 库。动画的速度不要太快，**特别是避免过快频率（单次 1 秒以内）的闪烁**，除非特别需要。在合适的地方加入等待，尽量使大部分段落都能持续三秒以上，为观众留出观察与体会的时间。请细心地选取合适的颜色，以更好地传达你的想法；请注意小灯发出的光不能制造深色效果，请以亮度明暗或色调纯度来表达。在时长方面，也不必被 1 秒的整数倍限制住，请灵活调整时长的整体比例，使其更加流畅，不要使某些段落太长或使重要的段落太短。编写程序前可以先规划各段的时长。
 
-动画函数（颜色分量取值范围均为 0~1，所有时间 t ≥ 100 毫秒）：
+动画函数（颜色分量取值范围均为 0~1，**所有时间 t ≥ 300 毫秒**）：
 - delay(t): 等待 t 毫秒；
 - fade(r, g, b, t): 从当前颜色过渡到新的颜色 (r, g, b)，历经 t 毫秒；
 - blink(r, g, b, n, t1, t2): 在当前颜色与指定颜色 (r, g, b) 之间往返闪烁 n 次，每次持续 t1 毫秒、间隔 t2 毫秒，最后回到当前颜色；
@@ -172,8 +177,8 @@ export const answerProgram = async (lightDescription) => {
 
 // ======== Test run ======== //
 if (import.meta.main) {
-  console.log(await answerProgram(await answerDescription('小鸭小鸭，唱首歌吧！')))
-  // console.log(await answerProgram(await answerDescription('小鸭小鸭，星星是什么样子的？')))
+  // console.log(await answerProgram(await answerDescription('小鸭小鸭，唱首歌吧！')))
+  console.log(await answerProgram(await answerDescription('小鸭小鸭，星星是什么样子的？')))
   // console.log(await answerDescription('小鸭小鸭，唱首歌吧！'))
   // console.log(await answerDescription('小鸭小鸭，今天天气真好！'))
   // console.log(await answerDescription('小鸭小鸭，你的心情怎么样？'))
