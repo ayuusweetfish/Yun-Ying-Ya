@@ -116,10 +116,21 @@ post_handle_t *post_create()
 {
   struct post_handle_t *p = malloc(sizeof(struct post_handle_t));
 
+#if 1
+  #include "wifi_cred.h"  // For TEST_SERVER_IP
+#endif
+
+#ifdef TEST_SERVER_IP
+  #define SERVER_URL "http://" TEST_SERVER_IP ":24678/"
+  #warning "Using TEST_SERVER_IP"
+#else
+  #define SERVER_URL "https://play.ayu.land/ya"
+  // #define SERVER_URL "http://45.63.5.138:24678/"
+#endif
+
   if (wifi_is_present())
     p->client = esp_http_client_init(&(esp_http_client_config_t){
-      // .url = "https://play.ayu.land/ya",
-      .url = "http://45.63.5.138:24678/",
+      .url = SERVER_URL,
       .auth_type = HTTP_AUTH_TYPE_NONE,
       .transport_type = HTTP_TRANSPORT_OVER_SSL,
       .crt_bundle_attach = esp_crt_bundle_attach,

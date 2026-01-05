@@ -2,6 +2,7 @@
 
 #define EXAMPLE_ESP_WIFI_SSID "Future Lab-6F"
 #define EXAMPLE_ESP_WIFI_PASS "--"
+#define TEST_SERVER_IP "192.168.1.100"
 
 #elif 1
 
