@@ -1,6 +1,7 @@
 const API_KEY = Deno.env.get('API_KEY_ALIYUN') || prompt('API key (Aliyun Bailian):')
 
-import crypto from 'node:crypto'
+// Gummy Chat v1
+// https://help.aliyun.com/zh/model-studio/real-time-websocket-api
 
 export const speechRecognition = () => new Promise((resolve, reject) => {
   const ws = new WebSocket(
