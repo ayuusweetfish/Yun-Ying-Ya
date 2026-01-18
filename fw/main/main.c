@@ -85,6 +85,9 @@ if (1) {
   }
   ESP_ERROR_CHECK(ret);
 
+#define DEMO 1
+
+#if !DEMO
   // Wi-Fi
 if (1) {
   wifi_init_sta();
@@ -99,6 +102,7 @@ if (0) {
   }
 }
 }
+#endif
   led_set_state(LED_STATE_IDLE, 500);
 
   // XXX: This does not work when allocated on the stack, for unknown reasons?
@@ -399,9 +403,28 @@ if (0) {
           led_set_state(LED_STATE_IDLE, 2000);
           vTaskDelay(pdMS_TO_TICKS(2000));
         } else {
+        #if DEMO
+          vTaskDelay(2400 / portTICK_PERIOD_MS);
+          led_set_program(
+"1000 D\n"
+"3000 F 1000 800 500\n"
+"4000 F 900 500 200\n"
+"4000 B 800 400 500\n"
+"4000 B 800 400 500\n"
+"3000 D\n"
+"5000 F 200 0 500\n"
+"1000 D\n"
+"3000 F 0 0 0\n"
+          );
+          led_set_state(LED_STATE_RUN, 500);
+          vTaskDelay(led_get_program_duration() / portTICK_PERIOD_MS);
+          led_set_state(LED_STATE_IDLE, 2000);
+          vTaskDelay(pdMS_TO_TICKS(2000));
+        #else
           led_set_state(LED_STATE_ERROR, 500);
           vTaskDelay(2000 / portTICK_PERIOD_MS);
           led_set_state(LED_STATE_IDLE, 500);
+        #endif
         }
         audio_clear_wake_state();
         audio_resume();
