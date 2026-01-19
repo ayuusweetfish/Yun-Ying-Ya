@@ -365,7 +365,9 @@ if (0) {
         xQueueReset((QueueHandle_t)sem_ulp);
         xSemaphoreTake(sem_ulp, portMAX_DELAY);
         ESP_LOGI(TAG, "Resuming now!");
+      #if !DEMO
         led_set_state(LED_STATE_SIGNAL, 50);
+      #endif
         last_push = *(volatile uint32_t *)&ulp_cur_buf_ptr;
         buf_push((last_push - 1536 + 2048) % 2048, last_push);
         audio_clear_can_sleep();
